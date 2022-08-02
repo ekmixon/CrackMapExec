@@ -54,7 +54,7 @@ class CMEModule:
 
         dumper = Dumper(session, timeout=10).load(self.method)
         if dumper is None:
-            context.log.error("Unable to load dump method '{}'".format(self.method))
+            context.log.error(f"Unable to load dump method '{self.method}'")
             return False
         file = dumper.dump()
         if file is None:

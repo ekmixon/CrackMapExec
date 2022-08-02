@@ -19,7 +19,17 @@ class navigator(DatabaseNavigator):
 
             links = self.db.get_admin_relations(userID=credID)
 
-            data.append([credID, str(len(links)) + ' Host(s)', credtype, domain, username, password])
+            data.append(
+                [
+                    credID,
+                    f'{len(links)} Host(s)',
+                    credtype,
+                    domain,
+                    username,
+                    password,
+                ]
+            )
+
 
         self.print_table(data, title='Credentials')
 
@@ -38,7 +48,18 @@ class navigator(DatabaseNavigator):
 
             links = self.db.get_admin_relations(hostID=hostID)
 
-            data.append([hostID, str(len(links)) + ' Cred(s)', ip, hostname, domain, os, instances])
+            data.append(
+                [
+                    hostID,
+                    f'{len(links)} Cred(s)',
+                    ip,
+                    hostname,
+                    domain,
+                    os,
+                    instances,
+                ]
+            )
+
 
         self.print_table(data, title='Hosts')
 

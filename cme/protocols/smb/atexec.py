@@ -106,14 +106,16 @@ class TSCH_EXEC:
         if self.__retOutput:
             if fileless:
                 local_ip = self.__rpctransport.get_socket().getsockname()[0]
-                argument_xml = "      <Arguments>/C {} &gt; \\\\{}\\{}\\{} 2&gt;&amp;1</Arguments>".format(command, local_ip, self.__share_name, tmpFileName)
+                argument_xml = f"      <Arguments>/C {command} &gt; \\\\{local_ip}\\{self.__share_name}\\{tmpFileName} 2&gt;&amp;1</Arguments>"
+
             else:
-                argument_xml = "      <Arguments>/C {} &gt; %windir%\\Temp\\{} 2&gt;&amp;1</Arguments>".format(command, tmpFileName)
+                argument_xml = f"      <Arguments>/C {command} &gt; %windir%\\Temp\\{tmpFileName} 2&gt;&amp;1</Arguments>"
+
 
         elif self.__retOutput is False:
-            argument_xml = "      <Arguments>/C {}</Arguments>".format(command)
+            argument_xml = f"      <Arguments>/C {command}</Arguments>"
 
-        logging.debug('Generated argument XML: ' + argument_xml)
+        logging.debug(f'Generated argument XML: {argument_xml}')
         xml += argument_xml
 
         xml += """
@@ -134,7 +136,7 @@ class TSCH_EXEC:
         #dce.set_auth_level(ntlm.NTLM_AUTH_PKT_PRIVACY)
         dce.bind(tsch.MSRPC_UUID_TSCHS)
         tmpName = gen_random_string(8)
-        tmpFileName = tmpName + '.tmp'
+        tmpFileName = f'{tmpName}.tmp'
 
         xml = self.gen_xml(command, tmpFileName, fileless)
 
@@ -160,7 +162,7 @@ class TSCH_EXEC:
         tsch.hSchRpcDelete(dce, '\\%s' % tmpName)
         taskCreated = False
 
-        if taskCreated is True:
+        if taskCreated:
             tsch.hSchRpcDelete(dce, '\\%s' % tmpName)
 
         if self.__retOutput:
@@ -183,7 +185,7 @@ class TSCH_EXEC:
                     except Exception as e:
                         if str(e).find('SHARING') > 0:
                             sleep(3)
-                        elif str(e).find('STATUS_OBJECT_NAME_NOT_FOUND') >= 0:
+                        elif 'STATUS_OBJECT_NAME_NOT_FOUND' in str(e):
                             sleep(3)
                         else:
                             raise

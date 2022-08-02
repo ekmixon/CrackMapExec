@@ -18,7 +18,7 @@ class CMESMBServer(threading.Thread):
             if errno == 98 and message == 'Address already in use':
                 logger.error('Error starting SMB server on port 445: the port is already in use')
             else:
-                logger.error('Error starting SMB server on port 445: {}'.format(message))
+                logger.error(f'Error starting SMB server on port 445: {message}')
                 exit(1)
 
     def addShare(self, share_name, share_path):

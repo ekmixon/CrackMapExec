@@ -33,11 +33,10 @@ class CMEAdapter(logging.LoggerAdapter):
 
     def process(self, msg, kwargs):
         if self.extra is None:
-            return u'{}'.format(msg), kwargs
+            return f'{msg}', kwargs
 
-        if 'module' in self.extra.keys():
-            if len(self.extra['module']) > 8:
-                self.extra['module'] = self.extra['module'][:8] + '...'
+        if 'module' in self.extra.keys() and len(self.extra['module']) > 8:
+            self.extra['module'] = self.extra['module'][:8] + '...'
 
         #If the logger is being called when hooking the 'options' module function
         if len(self.extra) == 1 and ('module' in self.extra.keys()):
@@ -53,11 +52,16 @@ class CMEAdapter(logging.LoggerAdapter):
         else:
             module_name = colored(self.extra['protocol'], 'blue', attrs=['bold'])
 
-        return u'{:<24} {:<15} {:<6} {:<16} {}'.format(module_name,
-                                                    self.extra['host'],
-                                                    self.extra['port'],
-                                                    self.extra['hostname'] if self.extra['hostname'] else 'NONE',
-                                                    msg), kwargs
+        return (
+            u'{:<24} {:<15} {:<6} {:<16} {}'.format(
+                module_name,
+                self.extra['host'],
+                self.extra['port'],
+                self.extra['hostname'] or 'NONE',
+                msg,
+            ),
+            kwargs,
+        )
 
     def info(self, msg, *args, **kwargs):
         try:
@@ -126,8 +130,9 @@ def setup_logger(level=logging.INFO, log_to_file=False, log_prefix=None, logger_
         if not log_prefix:
             log_prefix = 'log'
 
-        log_filename = '{}_{}.log'.format(log_prefix.replace('/', '_'), datetime.now().strftime('%Y-%m-%d'))
-        fileHandler = logging.FileHandler('./logs/{}'.format(log_filename))
+        log_filename = f"{log_prefix.replace('/', '_')}_{datetime.now().strftime('%Y-%m-%d')}.log"
+
+        fileHandler = logging.FileHandler(f'./logs/{log_filename}')
         fileHandler.setFormatter(formatter)
 
     streamHandler = logging.StreamHandler(sys.stdout)

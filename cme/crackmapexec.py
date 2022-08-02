@@ -153,7 +153,7 @@ def main():
                         args.cred_id.append(n)
                     args.cred_id.remove(cred_id)
                 except Exception as e:
-                    logger.error('Error parsing database credential id: {}'.format(e))
+                    logger.error(f'Error parsing database credential id: {e}')
                     sys.exit(1)
 
     if hasattr(args, 'target') and args.target:
@@ -187,7 +187,10 @@ def main():
     protocol_object = getattr(p_loader.load_protocol(protocol_path), args.protocol)
     protocol_db_object = getattr(p_loader.load_protocol(protocol_db_path), 'database')
 
-    db_path = os.path.join(cme_path, 'workspaces', current_workspace, args.protocol + '.db')
+    db_path = os.path.join(
+        cme_path, 'workspaces', current_workspace, f'{args.protocol}.db'
+    )
+
     # set the database connection to autocommit w/ isolation level
     db_connection = sqlite3.connect(db_path, check_same_thread=False)
     db_connection.text_factory = str
@@ -212,7 +215,7 @@ def main():
             modules = loader.get_modules()
             for name, props in modules.items():
                 if args.module.lower() == name.lower():
-                    logger.info('{} module options:\n{}'.format(name, props['options']))
+                    logger.info(f"{name} module options:\n{props['options']}")
             sys.exit(0)
 
         elif args.module:

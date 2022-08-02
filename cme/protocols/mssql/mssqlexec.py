@@ -10,7 +10,7 @@ class MSSQLEXEC:
     def execute(self, command, output=False):
         try:
             self.enable_xp_cmdshell()
-            self.mssql_conn.sql_query("exec master..xp_cmdshell '{}'".format(command))
+            self.mssql_conn.sql_query(f"exec master..xp_cmdshell '{command}'")
 
             if output:
                 self.mssql_conn.printReplies()
@@ -24,7 +24,7 @@ class MSSQLEXEC:
             return self.outputBuffer
 
         except Exception as e:
-            logging.debug('Error executing command via mssqlexec: {}'.format(e))
+            logging.debug(f'Error executing command via mssqlexec: {e}')
 
     def enable_xp_cmdshell(self):
         self.mssql_conn.sql_query("exec master.dbo.sp_configure 'show advanced options',1;RECONFIGURE;exec master.dbo.sp_configure 'xp_cmdshell', 1;RECONFIGURE;")

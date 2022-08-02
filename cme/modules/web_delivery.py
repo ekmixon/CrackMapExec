@@ -20,7 +20,7 @@ class CMEModule:
         URL  URL for the download cradle
         '''
 
-        if not 'URL' in module_options:
+        if 'URL' not in module_options:
             context.log.error('URL option is required!')
             exit(1)
 

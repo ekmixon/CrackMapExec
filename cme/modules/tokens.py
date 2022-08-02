@@ -51,7 +51,7 @@ class CMEModule:
         context.log.success('Executed payload')
 
     def on_request(self, context, request):
-        if 'Invoke-TokenManipulation.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-TokenManipulation.ps1':
             request.send_response(200)
             request.end_headers()
 

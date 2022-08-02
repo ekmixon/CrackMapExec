@@ -19,7 +19,17 @@ class navigator(DatabaseNavigator):
 
             links = self.db.get_admin_relations(userID=credID)
 
-            data.append([credID, str(len(links)) + ' Host(s)', credtype, domain, username, password])
+            data.append(
+                [
+                    credID,
+                    f'{len(links)} Host(s)',
+                    credtype,
+                    domain,
+                    username,
+                    password,
+                ]
+            )
+
 
         self.print_table(data, title='Credentials')
 
@@ -54,7 +64,7 @@ class navigator(DatabaseNavigator):
 
             links = self.db.get_admin_relations(hostID=hostID)
 
-            data.append([hostID, str(len(links)) + ' Cred(s)', ip, hostname, domain, os])
+            data.append([hostID, f'{len(links)} Cred(s)', ip, hostname, domain, os])
 
         self.print_table(data, title='Hosts')
     
@@ -115,16 +125,14 @@ class navigator(DatabaseNavigator):
                     permissions='w'
                 )
 
-                data = [["ShareID", "Name", "Remark"]]
+                data = [["ShareID", "Name", "Remark"], [shareID, name, remark]]
 
-                data.append([shareID, name, remark])
-            
                 self.print_table(data, title='Share')
 
                 host = self.db.get_computers(filterTerm=computerID)[0]
 
                 data = [['HostID', 'IP', 'Hostname', 'Domain', 'OS', 'DC']]
-  
+
                 hostID = host[0]
 
                 ip = host[1]
@@ -315,7 +323,7 @@ class navigator(DatabaseNavigator):
             creds = self.db.get_credentials(filterTerm=filterTerm)
             if len(creds) != 1:
                 self.display_creds(creds)
-            elif len(creds) == 1:
+            else:
                 data = [['CredID', 'CredType', 'Pillaged From HostID', 'Domain', 'UserName', 'Password']]
                 credIDList = []
 

@@ -22,7 +22,11 @@ class CMEModule:
 
         self.met_ssl = 'https'
 
-        if not 'SRVHOST' in module_options or not 'SRVPORT' in module_options or not 'RAND' in module_options:
+        if (
+            'SRVHOST' not in module_options
+            or 'SRVPORT' not in module_options
+            or 'RAND' not in module_options
+        ):
             context.log.error('SRVHOST and SRVPORT  and RAND options are required!')
             exit(1)
 

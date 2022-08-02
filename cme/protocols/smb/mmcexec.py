@@ -133,9 +133,14 @@ class MMCEXEC:
         self.__output = gen_random_string(6)
         local_ip = self.__smbconnection.getSMBServer().get_socket().getsockname()[0]
 
-        command = '/Q /c ' + data
+        command = f'/Q /c {data}'
         if self.__retOutput is True:
-            command += ' 1> ' + '\\\\{}\\{}\\{}'.format(local_ip, self.__share_name, self.__output) + ' 2>&1'
+            command += (
+                ' 1> '
+                + f'\\\\{local_ip}\\{self.__share_name}\\{self.__output}'
+                + ' 2>&1'
+            )
+
 
         dispParams = DISPPARAMS(None, False)
         dispParams['rgdispidNamedArgs'] = NULL

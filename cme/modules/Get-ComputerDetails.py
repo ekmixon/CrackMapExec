@@ -38,17 +38,11 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Get-ComputerDetails.ps1' == request.path[1:]:
+        if request.path[1:] == 'Get-ComputerDetails.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
-
-        elif 'Get-ComputerDetails.ps1' == request.path[1:]:
-            request.send_response(200)
-            request.end_headers()
-
-            request.wfile.write(self.ps_script2)
 
         else:
             request.send_response(404)

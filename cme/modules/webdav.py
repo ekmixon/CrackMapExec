@@ -39,9 +39,6 @@ class CMEModule:
             context.log.highlight(self.output.format(connection.conn.getRemoteHost()))
 
         except SessionError as e:
-            
-            if e.getErrorCode() == nt_errors.STATUS_OBJECT_NAME_NOT_FOUND:
-                pass
 
-            else:
+            if e.getErrorCode() != nt_errors.STATUS_OBJECT_NAME_NOT_FOUND:
                 raise e

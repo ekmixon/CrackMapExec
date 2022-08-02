@@ -109,8 +109,7 @@ class database:
         else:
             cur.execute("SELECT * FROM shares")
 
-        results = cur.fetchall()
-        return results
+        return cur.fetchall()
 
     def get_shares_by_access(self, permissions, shareID=None):
         cur = self.conn.cursor()
@@ -123,16 +122,14 @@ class database:
                 cur.execute("SELECT * FROM shares WHERE id=? write=1", [shareID])
             elif permissions == "rw":
                 cur.execute("SELECT * FROM shares WHERE id=? AND read=1 AND write=1", [shareID])
-        else:
-            if permissions == "r":
-                cur.execute("SELECT * FROM shares WHERE read=1")
-            elif permissions == "w":
-                cur.execute("SELECT * FROM shares WHERE write=1")
-            elif permissions == "rw":
-                cur.execute("SELECT * FROM shares WHERE read= AND write=1")
+        elif permissions == "r":
+            cur.execute("SELECT * FROM shares WHERE read=1")
+        elif permissions == "w":
+            cur.execute("SELECT * FROM shares WHERE write=1")
+        elif permissions == "rw":
+            cur.execute("SELECT * FROM shares WHERE read= AND write=1")
 
-        results = cur.fetchall()
-        return results
+        return cur.fetchall()
 
     def get_users_with_share_access(self, computerID, share_name, permissions):
         cur = self.conn.cursor()
@@ -145,8 +142,7 @@ class database:
         elif permissions == "rw":
             cur.execute("SELECT userid FROM shares WHERE computerid=(?) AND name=(?) AND read=1 AND write=1", [computerID, share_name])
 
-        results = cur.fetchall()
-        return results
+        return cur.fetchall()
 
     def add_computer(self, ip, hostname, domain, os, dc=None):
         """
@@ -164,7 +160,7 @@ class database:
             for host in results:
                 if (hostname != host[2]) or (domain != host[3]) or (os != host[4]):
                     cur.execute("UPDATE computers SET hostname=?, domain=?, os=? WHERE id=?", [hostname, domain, os, host[0]])
-                if dc != None and (dc != host[5]):
+                if dc not in [None, host[5]]:
                     cur.execute("UPDATE computers SET dc=? WHERE id=?", [dc, host[0]])
 
         cur.close()
@@ -206,7 +202,10 @@ class database:
 
         cur.close()
 
-        logging.debug('add_credential(credtype={}, domain={}, username={}, password={}, groupid={}, pillaged_from={}) => {}'.format(credtype, domain, username, password, groupid, pillaged_from, user_rowid))
+        logging.debug(
+            f'add_credential(credtype={credtype}, domain={domain}, username={username}, password={password}, groupid={groupid}, pillaged_from={pillaged_from}) => {user_rowid}'
+        )
+
 
         return user_rowid
 
@@ -239,7 +238,10 @@ class database:
 
         cur.close()
 
-        logging.debug('add_user(domain={}, username={}, groupid={}) => {}'.format(domain, username, groupid, user_rowid))
+        logging.debug(
+            f'add_user(domain={domain}, username={username}, groupid={groupid}) => {user_rowid}'
+        )
+
 
         return user_rowid
 
@@ -256,7 +258,7 @@ class database:
 
         cur.close()
 
-        logging.debug('add_group(domain={}, name={}) => {}'.format(domain, name, cur.lastrowid))
+        logging.debug(f'add_group(domain={domain}, name={name}) => {cur.lastrowid}')
 
         return cur.lastrowid
     '''
@@ -276,11 +278,9 @@ class database:
 
         if userid:
             cur.execute("SELECT * FROM users WHERE id=?", [userid])
-            users = cur.fetchall()
         else:
             cur.execute("SELECT * FROM users WHERE credtype=? AND LOWER(domain)=LOWER(?) AND LOWER(username)=LOWER(?) AND password=?", [credtype, domain, username, password])
-            users = cur.fetchall()
-
+        users = cur.fetchall()
         cur.execute('SELECT * FROM computers WHERE ip LIKE ?', [host])
         hosts = cur.fetchall()
 
@@ -373,9 +373,7 @@ class database:
     def is_credential_local(self, credentialID):
         cur = self.conn.cursor()
         cur.execute('SELECT domain FROM users WHERE id=?', [credentialID])
-        user_domain = cur.fetchall()
-
-        if user_domain:
+        if user_domain := cur.fetchall():
             cur.execute('SELECT * FROM computers WHERE LOWER(hostname)=LOWER(?)', [user_domain])
             results = cur.fetchall()
             cur.close()
@@ -395,11 +393,13 @@ class database:
         elif credtype:
             cur.execute("SELECT * FROM users WHERE credtype=?", [credtype])
 
-        # if we're filtering by username
         elif filterTerm and filterTerm != '':
-            cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
+            cur.execute(
+                "SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)",
+                [f'%{filterTerm}%'],
+            )
 
-        # otherwise return all credentials
+
         else:
             cur.execute("SELECT * FROM users")
 
@@ -424,9 +424,12 @@ class database:
         if self.is_user_valid(filterTerm):
             cur.execute("SELECT * FROM users WHERE id=? LIMIT 1", [filterTerm])
 
-        # if we're filtering by username
         elif filterTerm and filterTerm != '':
-            cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
+            cur.execute(
+                "SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)",
+                [f'%{filterTerm}%'],
+            )
+
 
         else:
             cur.execute("SELECT * FROM users")
@@ -463,18 +466,19 @@ class database:
         if self.is_computer_valid(filterTerm):
             cur.execute("SELECT * FROM computers WHERE id=? LIMIT 1", [filterTerm])
 
-        # if we're filtering by domain controllers
         elif filterTerm == 'dc':
             if domain:
                 cur.execute("SELECT * FROM computers WHERE dc=1 AND LOWER(domain)=LOWER(?)", [domain])
             else:
                 cur.execute("SELECT * FROM computers WHERE dc=1")
 
-        # if we're filtering by ip/hostname
         elif filterTerm and filterTerm != "":
-            cur.execute("SELECT * FROM computers WHERE ip LIKE ? OR LOWER(hostname) LIKE LOWER(?)", ['%{}%'.format(filterTerm), '%{}%'.format(filterTerm)])
+            cur.execute(
+                "SELECT * FROM computers WHERE ip LIKE ? OR LOWER(hostname) LIKE LOWER(?)",
+                [f'%{filterTerm}%', f'%{filterTerm}%'],
+            )
 
-        # otherwise return all computers
+
         else:
             cur.execute("SELECT * FROM computers")
 
@@ -494,7 +498,7 @@ class database:
         results = cur.fetchall()
         cur.close()
 
-        logging.debug('is_group_valid(groupID={}) => {}'.format(groupID, True if len(results) else False))
+        logging.debug(f'is_group_valid(groupID={groupID}) => {bool(len(results))}')
         return len(results) > 0
 
     def get_groups(self, filterTerm=None, groupName=None, groupDomain=None):
@@ -513,12 +517,19 @@ class database:
             cur.execute("SELECT * FROM groups WHERE LOWER(name)=LOWER(?) AND LOWER(domain)=LOWER(?)", [groupName, groupDomain])
 
         elif filterTerm and filterTerm !="":
-            cur.execute("SELECT * FROM groups WHERE LOWER(name) LIKE LOWER(?)", ['%{}%'.format(filterTerm)])
+            cur.execute(
+                "SELECT * FROM groups WHERE LOWER(name) LIKE LOWER(?)",
+                [f'%{filterTerm}%'],
+            )
+
 
         else:
             cur.execute("SELECT * FROM groups")
 
         results = cur.fetchall()
         cur.close()
-        logging.debug('get_groups(filterTerm={}, groupName={}, groupDomain={}) => {}'.format(filterTerm, groupName, groupDomain, results))
+        logging.debug(
+            f'get_groups(filterTerm={filterTerm}, groupName={groupName}, groupDomain={groupDomain}) => {results}'
+        )
+
         return results

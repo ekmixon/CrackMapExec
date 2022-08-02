@@ -35,7 +35,7 @@ class CMEModule:
         elif self.script_choice == 'PYTHON':
             stdin, stdout, stderr = connection.conn.exec_command("python2 -")
 
-        stdin.write("{}\n".format(self.script))
+        stdin.write(f"{self.script}\n")
         stdin.channel.shutdown_write()
         context.log.success('Executed command')
         for line in stdout:

@@ -37,13 +37,13 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'PowerView.ps1' == request.path[1:]:
+        elif request.path[1:] == 'PowerView.ps1':
             request.send_response(200)
             request.end_headers()
 
@@ -62,23 +62,27 @@ class CMEModule:
         #We've received the response, stop tracking this host
         response.stop_tracking_host()
 
-        dc_count = 0
         if len(data):
             buf = StringIO(data).readlines()
+            dc_count = 0
             for line in buf:
                 if line != '\r\n' and not line.startswith('Name') and not line.startswith('---'):
                     try:
                         hostname, domain, ip = filter(None, line.strip().split(' '))
                         hostname = hostname.split('.')[0].upper()
                         domain   = domain.split('.')[0].upper()
-                        context.log.highlight('Hostname: {} Domain: {} IP: {}'.format(hostname, domain, ip))
+                        context.log.highlight(f'Hostname: {hostname} Domain: {domain} IP: {ip}')
                         context.db.add_computer(ip, hostname, domain, '', dc=True)
                         dc_count += 1
                     except Exception:
                         context.log.error('Error parsing Domain Controller entry')
 
-            context.log.success('Added {} Domain Controllers to the database'.format(highlight(dc_count)))
+            context.log.success(
+                f'Added {highlight(dc_count)} Domain Controllers to the database'
+            )
 
-            log_name = 'Get_NetDomainController-{}-{}.log'.format(response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+
+            log_name = f'Get_NetDomainController-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.log'
+
             write_log(data, log_name)
-            context.log.info("Saved raw output to {}".format(log_name))
+            context.log.info(f"Saved raw output to {log_name}")

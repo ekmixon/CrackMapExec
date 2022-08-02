@@ -142,15 +142,16 @@ class database:
         if self.is_credential_valid(filterTerm):
             cur.execute("SELECT * FROM users WHERE id=? LIMIT 1", [filterTerm])
 
-        # if we're filtering by credtype
         elif credtype:
             cur.execute("SELECT * FROM users WHERE credtype=?", [credtype])
 
-        # if we're filtering by username
         elif filterTerm and filterTerm != "":
-            cur.execute("SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)", ['%{}%'.format(filterTerm.lower())])
+            cur.execute(
+                "SELECT * FROM users WHERE LOWER(username) LIKE LOWER(?)",
+                [f'%{filterTerm.lower()}%'],
+            )
 
-        # otherwise return all credentials
+
         else:
             cur.execute("SELECT * FROM users")
 
@@ -179,11 +180,13 @@ class database:
         if self.is_computer_valid(filterTerm):
             cur.execute("SELECT * FROM computers WHERE id=? LIMIT 1", [filterTerm])
 
-        # if we're filtering by ip/hostname
         elif filterTerm and filterTerm != "":
-            cur.execute("SELECT * FROM computers WHERE ip LIKE ? OR LOWER(hostname) LIKE LOWER(?)", ['%{}%'.format(filterTerm.lower()), '%{}%'.format(filterTerm.lower())])
+            cur.execute(
+                "SELECT * FROM computers WHERE ip LIKE ? OR LOWER(hostname) LIKE LOWER(?)",
+                [f'%{filterTerm.lower()}%', f'%{filterTerm.lower()}%'],
+            )
 
-        # otherwise return all credentials
+
         else:
             cur.execute("SELECT * FROM computers")
 

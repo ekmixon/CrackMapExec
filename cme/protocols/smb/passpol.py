@@ -16,7 +16,7 @@ def d2b(a):
 
     t2bin = tbin[::-1]
     if len(t2bin) != 8:
-        for x in range(6 - len(t2bin)):
+        for _ in range(6 - len(t2bin)):
             t2bin.insert(0, 0)
     return ''.join([str(g) for g in t2bin])
 
@@ -91,7 +91,7 @@ class PassPolDump:
                 self.lmhash, self.nthash = self.hash.split(':')
             else:
                 self.nthash = self.hash
-        
+
         if self.password is None:
             self.password = ''
 
@@ -103,14 +103,14 @@ class PassPolDump:
                 protodef = PassPolDump.KNOWN_PROTOCOLS[protocol]
                 port = protodef[1]
             except KeyError:
-                logging.debug("Invalid Protocol '{}'".format(protocol))
-            logging.debug("Trying protocol {}".format(protocol))
+                logging.debug(f"Invalid Protocol '{protocol}'")
+            logging.debug(f"Trying protocol {protocol}")
             rpctransport = transport.SMBTransport(self.addr, port, r'\samr', self.username, self.password, self.domain, 
                                                   self.lmhash, self.nthash, self.aesKey, doKerberos = self.doKerberos)
             try:
                 self.fetchList(rpctransport)
             except Exception as e:
-                logging.debug('Protocol failed: {}'.format(e))
+                logging.debug(f'Protocol failed: {e}')
             else:
                 # Got a response. No need for further iterations.
                 self.pretty_print()
@@ -186,22 +186,31 @@ class PassPolDump:
 
         logging.debug('Found domain(s):')
         for domain in self.__domains:
-            logging.debug('{}'.format(domain['Name']))
+            logging.debug(f"{domain['Name']}")
 
-        self.logger.success("Dumping password info for domain: {}".format(self.__domains[0]['Name']))
+        self.logger.success(
+            f"Dumping password info for domain: {self.__domains[0]['Name']}"
+        )
 
-        self.logger.highlight("Minimum password length: {}".format(self.__min_pass_len))
-        self.logger.highlight("Password history length: {}".format(self.__pass_hist_len))
-        self.logger.highlight("Maximum password age: {}".format(self.__max_pass_age))
+
+        self.logger.highlight(f"Minimum password length: {self.__min_pass_len}")
+        self.logger.highlight(f"Password history length: {self.__pass_hist_len}")
+        self.logger.highlight(f"Maximum password age: {self.__max_pass_age}")
         self.logger.highlight('')
-        self.logger.highlight("Password Complexity Flags: {}".format(self.__pass_prop or "None"))
+        self.logger.highlight(
+            f'Password Complexity Flags: {self.__pass_prop or "None"}'
+        )
+
 
         for i, a in enumerate(self.__pass_prop):
-            self.logger.highlight("\t{} {}".format(PASSCOMPLEX[i], str(a)))
+            self.logger.highlight(f"\t{PASSCOMPLEX[i]} {str(a)}")
 
         self.logger.highlight('')
-        self.logger.highlight("Minimum password age: {}".format(self.__min_pass_age))
-        self.logger.highlight("Reset Account Lockout Counter: {}".format(self.__rst_accnt_lock_counter))
-        self.logger.highlight("Locked Account Duration: {}".format(self.__lock_accnt_dur))
-        self.logger.highlight("Account Lockout Threshold: {}".format(self.__accnt_lock_thres))
-        self.logger.highlight("Forced Log off Time: {}".format(self.__force_logoff_time))
+        self.logger.highlight(f"Minimum password age: {self.__min_pass_age}")
+        self.logger.highlight(
+            f"Reset Account Lockout Counter: {self.__rst_accnt_lock_counter}"
+        )
+
+        self.logger.highlight(f"Locked Account Duration: {self.__lock_accnt_dur}")
+        self.logger.highlight(f"Account Lockout Threshold: {self.__accnt_lock_thres}")
+        self.logger.highlight(f"Forced Log off Time: {self.__force_logoff_time}")

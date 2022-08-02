@@ -35,7 +35,7 @@ class CMEModule:
         searchFilter = "(objectclass=user)"
 
         try:
-            logging.debug('Search Filter=%s' % searchFilter)
+            logging.debug(f'Search Filter={searchFilter}')
             resp = connection.ldapConnection.search(searchFilter=searchFilter,
                                         attributes=['sAMAccountName','description'],
                                         sizeLimit=999)
@@ -45,7 +45,6 @@ class CMEModule:
                 # We reached the sizeLimit, process the answers we have already and that's it. Until we implement
                 # paged queries
                 resp = e.getAnswers()
-                pass
             else:
                 logging.debug(e)
                 return False
@@ -53,7 +52,7 @@ class CMEModule:
         answers = []
         logging.debug('Total of records returned %d' % len(resp))
         for item in resp:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             sAMAccountName =  ''
             description = ''
@@ -67,13 +66,12 @@ class CMEModule:
                     answers.append([sAMAccountName,description])
             except Exception as e:
                 logging.debug("Exception:", exc_info=True)
-                logging.debug('Skipping item, cannot process due to error %s' % str(e))
-                pass
+                logging.debug(f'Skipping item, cannot process due to error {str(e)}')
         answers = self.filter_answer(context, answers)
         if len(answers) > 0:
             context.log.success('Found following users: ')
             for answer in answers:
-                context.log.highlight('User: {} description: {}'.format(answer[0],answer[1]))
+                context.log.highlight(f'User: {answer[0]} description: {answer[1]}')
 
     def filter_answer(self, context, answers):
         # No option to filter
@@ -91,13 +89,10 @@ class CMEModule:
                     conditionFilter = False
                     if self.FILTER in description:
                         conditionFilter = True
-    
+
                 # Password policy
                 if self.PASSWORDPOLICY:
-                    conditionPasswordPolicy = False
-                    if self.regex.search(description):
-                        conditionPasswordPolicy = True
-                
+                    conditionPasswordPolicy = bool(self.regex.search(description))
                 if (self.FILTER and conditionFilter and self.PASSWORDPOLICY and conditionPasswordPolicy):
                     answersFiltered.append([answer[0],description])
                 elif not self.FILTER and self.PASSWORDPOLICY and conditionPasswordPolicy:

@@ -103,7 +103,10 @@ class mssql(connection):
                     self.domain = self.hostname
 
             except Exception as e:
-                self.logger.error("Error retrieving host domain: {} specify one manually with the '-d' flag".format(e))
+                self.logger.error(
+                    f"Error retrieving host domain: {e} specify one manually with the '-d' flag"
+                )
+
 
         self.mssql_instances = self.conn.getInstances(0)
         self.db.add_computer(self.host, self.hostname, self.domain, self.server_os, len(self.mssql_instances))
@@ -114,9 +117,9 @@ class mssql(connection):
             pass
 
     def print_host_info(self):
-        self.logger.info(u"{} (name:{}) (domain:{})".format(self.server_os,
-                                                            self.hostname,
-                                                            self.domain))
+        self.logger.info(
+            f"{self.server_os} (name:{self.hostname}) (domain:{self.domain})"
+        )
         # if len(self.mssql_instances) > 0:
         #     self.logger.info("MSSQL DB Instances: {}".format(len(self.mssql_instances)))
         #     for i, instance in enumerate(self.mssql_instances):
@@ -145,7 +148,7 @@ class mssql(connection):
             else:
                 return False
         except Exception as e:
-            self.logger.error('Error calling check_if_admin(): {}'.format(e))
+            self.logger.error(f'Error calling check_if_admin(): {e}')
             return False
 
         return True
@@ -172,18 +175,22 @@ class mssql(connection):
             if self.admin_privs:
                 self.db.add_admin_user('plaintext', domain, username, password, self.host)
 
-            out = u'{}{}:{} {}'.format('{}\\'.format(domain) if not self.args.local_auth else '',
-                                    username,
-                                    password,
-                                    highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
+            out = u'{}{}:{} {}'.format(
+                '' if self.args.local_auth else f'{domain}\\',
+                username,
+                password,
+                highlight(
+                    f"({self.config.get('CME', 'pwn3d_label')})"
+                    if self.admin_privs
+                    else ''
+                ),
+            )
+
             self.logger.success(out)
             if not self.args.continue_on_success:
                 return True
         except Exception as e:
-            self.logger.error(u'{}\\{}:{} {}'.format(domain,
-                                                        username,
-                                                        password,
-                                                        e))
+            self.logger.error(f'{domain}\\{username}:{password} {e}')
             return False
 
     def hash_login(self, domain, username, ntlm_hash):
@@ -203,7 +210,15 @@ class mssql(connection):
         self.create_conn_obj()
 
         try:
-            res = self.conn.login(None, username, '', domain, ':' + nthash if not lmhash else ntlm_hash, True)
+            res = self.conn.login(
+                None,
+                username,
+                '',
+                domain,
+                ntlm_hash if lmhash else f':{nthash}',
+                True,
+            )
+
             if res is not True:
                 self.conn.printReplies()
                 return False
@@ -217,18 +232,13 @@ class mssql(connection):
             if self.admin_privs:
                 self.db.add_admin_user('hash', domain, username, ntlm_hash, self.host)
 
-            out = u'{}\\{} {} {}'.format(domain,
-                                        username,
-                                        ntlm_hash,
-                                        highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else ''))
+            out = f"""{domain}\\{username} {ntlm_hash} {highlight(f"({self.config.get('CME', 'pwn3d_label')})" if self.admin_privs else '')}"""
+
             self.logger.success(out)
             if not self.args.continue_on_success:
                 return True
         except Exception as e:
-            self.logger.error(u'{}\\{}:{} {}'.format(domain,
-                                                        username,
-                                                        ntlm_hash,
-                                                        e))
+            self.logger.error(f'{domain}\\{username}:{ntlm_hash} {e}')
             return False
 
     def mssql_query(self):
@@ -245,14 +255,14 @@ class mssql(connection):
             payload = self.args.execute
             if not self.args.no_output: get_output = True
 
-        logging.debug('Command to execute:\n{}'.format(payload))
+        logging.debug(f'Command to execute:\n{payload}')
         exec_method = MSSQLEXEC(self.conn)
         raw_output = exec_method.execute(payload, get_output)
         logging.debug('Executed command via mssqlexec')
 
         if hasattr(self, 'server'): self.server.track_host(self.host)
 
-        output = u'{}'.format(raw_output)
+        output = f'{raw_output}'
 
         if self.args.execute or self.args.ps_execute:
             #self.logger.success('Executed command {}'.format('via {}'.format(self.args.exec_method) if self.args.exec_method else ''))
@@ -280,7 +290,7 @@ class mssql(connection):
 
 def printRepliesCME(self):
     for keys in self.replies.keys():
-        for i, key in enumerate(self.replies[keys]):
+        for key in self.replies[keys]:
             if key['TokenType'] == TDS_ERROR_TOKEN:
                 error =  "ERROR(%s): Line %d: %s" % (key['ServerName'].decode('utf-16le'), key['LineNumber'], key['MsgText'].decode('utf-16le'))
                 self.lastError = SQLErrorException("ERROR: Line %d: %s" % (key['LineNumber'], key['MsgText'].decode('utf-16le')))
@@ -309,6 +319,8 @@ def printRepliesCME(self):
                         _type = 'PACKETSIZE'
                     else:
                         _type = "%d" % key['Type']
-                    self._MSSQL__rowsPrinter.info("ENVCHANGE(%s): Old Value: %s, New Value: %s" % (_type,record['OldValue'].decode('utf-16le'), record['NewValue'].decode('utf-16le')))
+                    self._MSSQL__rowsPrinter.info(
+                        f"ENVCHANGE({_type}): Old Value: {record['OldValue'].decode('utf-16le')}, New Value: {record['NewValue'].decode('utf-16le')}"
+                    )
 
 tds.MSSQL.printReplies = printRepliesCME

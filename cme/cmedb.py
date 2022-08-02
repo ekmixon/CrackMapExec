@@ -29,7 +29,7 @@ class DatabaseNavigator(cmd.Cmd):
         self.config = main_menu.config
         self.proto = proto
         self.db = database
-        self.prompt = 'cmedb ({})({}) > '.format(main_menu.workspace, proto)
+        self.prompt = f'cmedb ({main_menu.workspace})({proto}) > '
 
     def do_back(self, line):
         raise UserExitedProto
@@ -67,9 +67,12 @@ class DatabaseNavigator(cmd.Cmd):
                 for cred in creds:
                     credid, domain, user, password, credtype, fromhost = cred
                     if line[1].lower() == 'csv':
-                        export_file.write('{},{},{},{},{},{}\n'.format(credid,domain,user,password,credtype,fromhost))
+                        export_file.write(
+                            f'{credid},{domain},{user},{password},{credtype},{fromhost}\n'
+                        )
+
                     else:
-                        export_file.write('{}\n'.format(password))
+                        export_file.write(f'{password}\n')
             print('[+] creds exported')
 
         elif line[0].lower() == 'hosts':
@@ -80,7 +83,7 @@ class DatabaseNavigator(cmd.Cmd):
             with open(os.path.expanduser(line[1]), 'w') as export_file:
                 for host in hosts:
                     hostid,ipaddress,hostname,domain,opsys,dc = host
-                    export_file.write('{},{},{},{},{},{}\n'.format(hostid,ipaddress,hostname,domain,opsys,dc))
+                    export_file.write(f'{hostid},{ipaddress},{hostname},{domain},{opsys},{dc}\n')
             print('[+] hosts exported')
 
         else:
@@ -99,15 +102,28 @@ class DatabaseNavigator(cmd.Cmd):
                        'password': self.config.get('Empire', 'password')}
 
             # Pull the host and port from the config file
-            base_url = 'https://{}:{}'.format(self.config.get('Empire', 'api_host'), self.config.get('Empire', 'api_port'))
+            base_url = f"https://{self.config.get('Empire', 'api_host')}:{self.config.get('Empire', 'api_port')}"
+
 
             try:
-                r = requests.post(base_url + '/api/admin/login', json=payload, headers=headers, verify=False)
+                r = requests.post(
+                    f'{base_url}/api/admin/login',
+                    json=payload,
+                    headers=headers,
+                    verify=False,
+                )
+
                 if r.status_code == 200:
                     token = r.json()['token']
 
                     url_params = {'token': token}
-                    r = requests.get(base_url + '/api/creds', headers=headers, params=url_params, verify=False)
+                    r = requests.get(
+                        f'{base_url}/api/creds',
+                        headers=headers,
+                        params=url_params,
+                        verify=False,
+                    )
+
                     creds = r.json()
 
                     for cred in creds['creds']:
@@ -121,7 +137,7 @@ class DatabaseNavigator(cmd.Cmd):
                     print("[-] Error authenticating to Empire's RESTful API server!")
 
             except ConnectionError as e:
-                print("[-] Unable to connect to Empire's RESTful API server: {}".format(e))
+                print(f"[-] Unable to connect to Empire's RESTful API server: {e}")
 
         elif line == 'metasploit':
             msf = Msfrpc({'host': self.config.get('Metasploit', 'rpc_host'),
@@ -151,7 +167,7 @@ class DatabaseNavigator(cmd.Cmd):
                     password = cred[5]
                     cred_type = cred[6]
 
-                    if proto == '({})'.format(self.proto) and cred_type == 'Password':
+                    if proto == f'({self.proto})' and cred_type == 'Password':
                         self.db.add_credential('plaintext', '', username, password)
 
                 except IndexError:
@@ -191,7 +207,7 @@ class CMEDBMenu(cmd.Cmd):
             self.config = configparser.ConfigParser()
             self.config.read(self.config_path)
         except Exception as e:
-            print("[-] Error reading cme.conf: {}".format(e))
+            print(f"[-] Error reading cme.conf: {e}")
             sys.exit(1)
 
         self.workspace_dir = os.path.expanduser('~/.cme/workspaces')
@@ -220,7 +236,7 @@ class CMEDBMenu(cmd.Cmd):
         if not proto:
             return
 
-        proto_db_path = os.path.join(self.workspace_dir, self.workspace, proto + '.db')
+        proto_db_path = os.path.join(self.workspace_dir, self.workspace, f'{proto}.db')
         if os.path.exists(proto_db_path):
             self.open_proto_db(proto_db_path)
             db_nav_object = self.p_loader.load_protocol(self.protocols[proto]['nvpath'])
@@ -243,7 +259,7 @@ class CMEDBMenu(cmd.Cmd):
         if line.split()[0] == 'create':
             new_workspace = line.split()[1].strip()
 
-            print("[*] Creating workspace '{}'".format(new_workspace))
+            print(f"[*] Creating workspace '{new_workspace}'")
             os.mkdir(os.path.join(self.workspace_dir, new_workspace))
 
             for protocol in self.protocols.keys():
@@ -252,10 +268,13 @@ class CMEDBMenu(cmd.Cmd):
                 except KeyError:
                     continue
 
-                proto_db_path = os.path.join(self.workspace_dir, new_workspace, protocol + '.db')
+                proto_db_path = os.path.join(
+                    self.workspace_dir, new_workspace, f'{protocol}.db'
+                )
+
 
                 if not os.path.exists(proto_db_path):
-                    print('[*] Initializing {} protocol database'.format(protocol.upper()))
+                    print(f'[*] Initializing {protocol.upper()} protocol database')
                     conn = sqlite3.connect(proto_db_path)
                     c = conn.cursor()
 
@@ -276,7 +295,7 @@ class CMEDBMenu(cmd.Cmd):
             self.write_configfile()
 
             self.workspace = line
-            self.prompt = 'cmedb ({}) > '.format(line)
+            self.prompt = f'cmedb ({line}) > '
 
     def do_exit(self, line):
         sys.exit(0)

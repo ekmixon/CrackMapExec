@@ -9,9 +9,8 @@ class protocol_loader:
         self.cme_path = os.path.expanduser('~/.cme')
 
     def load_protocol(self, protocol_path):
-        protocol = imp.load_source('protocol', protocol_path)
         #if self.module_is_sane(module, module_path):
-        return protocol
+        return imp.load_source('protocol', protocol_path)
 
     def get_protocols(self):
         protocols = {}

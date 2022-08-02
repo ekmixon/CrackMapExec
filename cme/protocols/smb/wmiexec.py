@@ -64,15 +64,15 @@ class WMIEXEC:
             return self.__outputBuffer.decode('cp437')
 
     def cd(self, s):
-        self.execute_remote('cd ' + s)
+        self.execute_remote(f'cd {s}')
         if len(self.__outputBuffer.strip('\r\n')) > 0:
             print(self.__outputBuffer)
-            self.__outputBuffer = b''
         else:
             self.__pwd = ntpath.normpath(ntpath.join(self.__pwd, s))
             self.execute_remote('cd ')
             self.__pwd = self.__outputBuffer.strip('\r\n')
-            self.__outputBuffer = b''
+
+        self.__outputBuffer = b''
 
     def output_callback(self, data):
         self.__outputBuffer += data
@@ -95,7 +95,7 @@ class WMIEXEC:
         if self.__retOutput:
             command += ' 1> ' + '\\\\127.0.0.1\\%s' % self.__share + self.__output  + ' 2>&1'
 
-        logging.debug('Executing command: ' + command)
+        logging.debug(f'Executing command: {command}')
         self.__win32Process.Create(command, self.__pwd, None)
         self.get_output_remote()
 
@@ -103,9 +103,14 @@ class WMIEXEC:
         self.__output = gen_random_string(6)
         local_ip = self.__smbconnection.getSMBServer().get_socket().getsockname()[0]
 
-        command = self.__shell + data + ' 1> \\\\{}\\{}\\{} 2>&1'.format(local_ip, self.__share_name, self.__output)
+        command = (
+            self.__shell
+            + data
+            + f' 1> \\\\{local_ip}\\{self.__share_name}\\{self.__output} 2>&1'
+        )
 
-        logging.debug('Executing command: ' + command)
+
+        logging.debug(f'Executing command: {command}')
         self.__win32Process.Create(command, self.__pwd, None)
         self.get_output_fileless()
 
@@ -128,12 +133,7 @@ class WMIEXEC:
                 self.__smbconnection.getFile(self.__share, self.__output, self.output_callback)
                 break
             except Exception as e:
-                if str(e).find('STATUS_SHARING_VIOLATION') >=0:
+                if 'STATUS_SHARING_VIOLATION' in str(e):
                     # Output not finished, let's wait
                     sleep(2)
-                    pass
-                else:
-                    #print str(e)
-                    pass
-
         self.__smbconnection.deleteFile(self.__share, self.__output)

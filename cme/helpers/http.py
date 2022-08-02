@@ -15,7 +15,8 @@ def get_desktop_uagent(uagent=None):
         "Safari5.0": "Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US) AppleWebKit/533.18.1 (KHTML, like Gecko) Version/5.0 Safari/533.16"
     }
 
-    if not uagent: 
-        return desktop_uagents[random.choice(desktop_uagents.keys())]
-    elif uagent:
-        return desktop_uagents[uagent]
+    return (
+        desktop_uagents[uagent]
+        if uagent
+        else desktop_uagents[random.choice(desktop_uagents.keys())]
+    )

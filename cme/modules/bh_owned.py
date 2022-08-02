@@ -22,7 +22,7 @@ class CMEModule:
             USER           Username for Neo4j database (default: 'neo4j')
             PASS           Password for Neo4j database (default: 'neo4j')
         """
-        
+
         self.neo4j_URI = "127.0.0.1"
         self.neo4j_Port = "7687"
         self.neo4j_user = "neo4j"
@@ -44,24 +44,29 @@ class CMEModule:
             from neo4j import GraphDatabase
 
         from neo4j.exceptions import AuthError, ServiceUnavailable
-        
+
         if context.local_auth:
             domain    = connection.conn.getServerDNSDomainName()
         else:
             domain = connection.domain
 
 
-        host_fqdn = (connection.hostname + "." + domain).upper()
-        uri = "bolt://{}:{}".format(self.neo4j_URI, self.neo4j_Port)
+        host_fqdn = f"{connection.hostname}.{domain}".upper()
+        uri = f"bolt://{self.neo4j_URI}:{self.neo4j_Port}"
 
         try:
             driver = GraphDatabase.driver(uri, auth=(self.neo4j_user, self.neo4j_pass), encrypted=False)
         except AuthError as e:
             context.log.error(
-                "Provided Neo4J credentials ({}:{}) are not valid. See --options".format(self.neo4j_user, self.neo4j_pass))
+                f"Provided Neo4J credentials ({self.neo4j_user}:{self.neo4j_pass}) are not valid. See --options"
+            )
+
             sys.exit()
         except ServiceUnavailable as e:
-            context.log.error("Neo4J does not seem to be available on {}. See --options".format(uri))
+            context.log.error(
+                f"Neo4J does not seem to be available on {uri}. See --options"
+            )
+
             sys.exit()
         except Exception as e:
             context.log.error("Unexpected error with Neo4J")
@@ -73,8 +78,13 @@ class CMEModule:
                 result = tx.run(
                     "MATCH (c:Computer {{name:\"{}\"}}) SET c.owned=True RETURN c.name AS name".format(host_fqdn))
         if len(result.value()) > 0:
-            context.log.success("Node {} successfully set as owned in BloodHound".format(host_fqdn))
+            context.log.success(
+                f"Node {host_fqdn} successfully set as owned in BloodHound"
+            )
+
         else:
             context.log.error(
-                "Node {} does not appear to be in Neo4J database. Have you imported correct data?".format(host_fqdn))
+                f"Node {host_fqdn} does not appear to be in Neo4J database. Have you imported correct data?"
+            )
+
         driver.close()

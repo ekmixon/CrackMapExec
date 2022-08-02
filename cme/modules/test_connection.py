@@ -26,13 +26,11 @@ class CMEModule:
         self.host = module_options['HOST']
 
     def on_admin_login(self, context, connection):
-        command = 'Test-Connection {} -quiet -count 1'.format(self.host)
+        command = f'Test-Connection {self.host} -quiet -count 1'
 
-        output = connection.ps_execute(command, get_output=True)
-
-        if output:
+        if output := connection.ps_execute(command, get_output=True):
             output = output.strip()
-            if bool(output) is True:
+            if bool(output):
                 context.log.success('Pinged successfully')
-            elif bool(output) is False:
+            else:
                 context.log.error('Host unreachable')

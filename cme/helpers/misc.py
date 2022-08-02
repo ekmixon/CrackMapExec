@@ -23,17 +23,14 @@ def gen_random_string(length=10):
 
 def validate_ntlm(data):
     allowed = re.compile("^[0-9a-f]{32}", re.IGNORECASE)
-    if allowed.match(data):
-        return True
-    else:
-        return False
+    return bool(allowed.match(data))
 
 
 def called_from_cmd_args():
     for stack in inspect.stack():
         if stack[3] == 'print_host_info':
             return True
-        if stack[3] == 'plaintext_login' or stack[3] == 'hash_login' or stack[3] == 'kerberos_login':
+        if stack[3] in ['plaintext_login', 'hash_login', 'kerberos_login']:
             return True
         if stack[3] == 'call_cmd_args':
             return True
@@ -61,10 +58,7 @@ def which(cmd, mode=os.F_OK | os.X_OK, path=None):
     # rather than referring to PATH directories. This includes checking
     # relative to the current directory, e.g. ./script
     if os.path.dirname(cmd):
-        if _access_check(cmd, mode):
-            return cmd
-        return None
-
+        return cmd if _access_check(cmd, mode) else None
     if path is None:
         path = os.environ.get("PATH", os.defpath)
     if not path:

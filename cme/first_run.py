@@ -45,10 +45,10 @@ def first_run_setup(logger):
         except KeyError:
             continue
 
-        proto_db_path = os.path.join(WS_PATH, 'default', protocol + '.db')
+        proto_db_path = os.path.join(WS_PATH, 'default', f'{protocol}.db')
 
         if not os.path.exists(proto_db_path):
-            logger.info('Initializing {} protocol database'.format(protocol.upper()))
+            logger.info(f'Initializing {protocol.upper()} protocol database')
             conn = sqlite3.connect(proto_db_path)
             c = conn.cursor()
 
@@ -90,7 +90,7 @@ def first_run_setup(logger):
             if e.errno == errno.ENOENT:
                 logger.error('OpenSSL command line utility is not installed, could not generate certificate, using default certificate')
                 default_path = os.path.join(os.path.dirname(cme.__file__), 'data', 'default.pem')
-                shutil.copy(default_path, CERT_PATH)                
+                shutil.copy(default_path, CERT_PATH)
             else:
-                logger.error('Error while generating SSL certificate: {}'.format(e))
+                logger.error(f'Error while generating SSL certificate: {e}')
                 exit(1)

@@ -39,16 +39,16 @@ class CMEModule:
             self.search_filter = '(&(objectclass=user)'
 
             if 'DESC_FILTER' in module_options:
-                self.search_filter += '(description={})'.format(module_options['DESC_FILTER'])
+                self.search_filter += f"(description={module_options['DESC_FILTER']})"
 
             if 'DESC_INVERT' in module_options:
-                self.search_filter += '(!(description={}))'.format(module_options['DESC_INVERT'])
+                self.search_filter += f"(!(description={module_options['DESC_INVERT']}))"
 
             if 'USER_FILTER' in module_options:
-                self.search_filter += '(sAMAccountName={})'.format(module_options['USER_FILTER'])
+                self.search_filter += f"(sAMAccountName={module_options['USER_FILTER']})"
 
             if 'USER_INVERT' in module_options:
-                self.search_filter += '(!(sAMAccountName={}))'.format(module_options['USER_INVERT'])
+                self.search_filter += f"(!(sAMAccountName={module_options['USER_INVERT']}))"
 
             self.search_filter += ')'
 
@@ -66,7 +66,7 @@ class CMEModule:
         try:
             self.log_file.close()
 
-            info = 'Saved {} user descriptions to {}'.format(self.desc_count, self.log_file.name)
+            info = f'Saved {self.desc_count} user descriptions to {self.log_file.name}'
             self.context.log.highlight(info)
 
         except AttributeError:
@@ -78,7 +78,10 @@ class CMEModule:
         Users can specify additional LDAP filters that are applied to the query.
         '''
         self.create_log_file(connection.conn.getRemoteHost(), datetime.now().strftime("%Y%m%d_%H%M%S"))
-        context.log.debug("Starting LDAP search with search filter '{}'".format(self.search_filter))
+        context.log.debug(
+            f"Starting LDAP search with search filter '{self.search_filter}'"
+        )
+
 
         try:
             sc = ldap.SimplePagedResultsControl()
@@ -88,16 +91,16 @@ class CMEModule:
                                              perRecordCallback=self.process_record)
 
         except LDAPSearchError as e:
-            context.log.error('Obtained unexpected exception: {}'.format(str(e)))
+            context.log.error(f'Obtained unexpected exception: {str(e)}')
 
     def create_log_file(self, host, time):
         '''
         Create a log file for dumping user descriptions.
         '''
-        logfile = 'UserDesc-{}-{}.log'.format(host, time)
+        logfile = f'UserDesc-{host}-{time}.log'
         logfile = Path.home().joinpath('.cme').joinpath('logs').joinpath(logfile)
 
-        self.context.log.debug("Creating log file '{}'".format(logfile))
+        self.context.log.debug(f"Creating log file '{logfile}'")
 
         self.log_file = open(logfile, 'w')
         self.append_to_log("User:", "Description:")
@@ -139,7 +142,10 @@ class CMEModule:
         except Exception as e:
 
             entry = sAMAccountName or 'item'
-            self.context.error("Skipping {}, cannot process LDAP entry due to error: '{}'".format(entry, str(e)))
+            self.context.error(
+                f"Skipping {entry}, cannot process LDAP entry due to error: '{str(e)}'"
+            )
+
 
         if description and sAMAccountName not in self.account_names:
 
@@ -147,7 +153,10 @@ class CMEModule:
             self.append_to_log(sAMAccountName, description)
 
             if self.highlight(description):
-                self.context.log.highlight('User: {} - Description: {}'.format(sAMAccountName, description))
+                self.context.log.highlight(
+                    f'User: {sAMAccountName} - Description: {description}'
+                )
+
 
             self.account_names.add(sAMAccountName)
 
@@ -165,8 +174,4 @@ class CMEModule:
         hanging fruites. More dedicated searches for sensitive information should be done using the logfile.
         This allows you to refine your search query at any time without having to pull data from AD again.
         '''
-        for keyword in self.keywords:
-            if keyword.lower() in description.lower():
-                return True
-
-        return False
+        return any(keyword.lower() in description.lower() for keyword in self.keywords)

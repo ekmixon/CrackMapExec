@@ -62,21 +62,20 @@ class ssh(connection):
         try:
             if self.args.key_file:
                 passwd = password
-                password = u'{} (keyfile: {})'.format(passwd, self.args.key_file)
+                password = f'{passwd} (keyfile: {self.args.key_file})'
                 self.conn.connect(self.host, port=self.args.port, username=username, passphrase=passwd, key_filename=self.args.key_file, look_for_keys=False, allow_agent=False)
             else:
                 self.conn.connect(self.host, port=self.args.port, username=username, password=password, look_for_keys=False, allow_agent=False)
 
             self.check_if_admin()
-            self.logger.success(u'{}:{} {}'.format(username,
-                                                   password,
-                                                   highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else '')))
+            self.logger.success(
+                f"""{username}:{password} {highlight(f"({self.config.get('CME', 'pwn3d_label')})" if self.admin_privs else '')}"""
+            )
+
             if not self.args.continue_on_success:
                 return True
         except Exception as e:
-            self.logger.error(u'{}:{} {}'.format(username,
-                                                 password,
-                                                 e))
+            self.logger.error(f'{username}:{password} {e}')
             self.client_close()
             return False
 

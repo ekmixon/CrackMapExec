@@ -16,7 +16,7 @@ class CMEModule:
             ACTION  Create/Delete the registry key (choices: enable, disable)
         '''
 
-        if not 'ACTION' in module_options:
+        if 'ACTION' not in module_options:
             context.log.error('ACTION option not specified!')
             exit(1)
 

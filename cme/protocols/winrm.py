@@ -72,9 +72,7 @@ class winrm(connection):
                 try:
                     smb_conn.login('', '')
                 except SessionError as e:
-                    if "STATUS_ACCESS_DENIED" in e.message:
-                        pass
-
+                    pass
                 self.domain = smb_conn.getServerDNSDomainName()
                 self.hostname = smb_conn.getServerName()
                 self.server_os = smb_conn.getServerOS()
@@ -86,7 +84,10 @@ class winrm(connection):
                     pass
 
             except Exception as e:
-                logging.debug("Error retrieving host domain: {} specify one manually with the '-d' flag".format(e))
+                logging.debug(
+                    f"Error retrieving host domain: {e} specify one manually with the '-d' flag"
+                )
+
 
             if self.args.domain:
                 self.domain = self.args.domain
@@ -95,37 +96,37 @@ class winrm(connection):
                 self.domain = self.hostname
 
     def print_host_info(self):
-        if self.args.domain:
-            self.logger.info(self.endpoint)
-        else:    
-            self.logger.info(u"{} (name:{}) (domain:{})".format(self.server_os,
-                                                                    self.hostname,
-                                                                    self.domain))
-            self.logger.info(self.endpoint)
+        if not self.args.domain:
+            self.logger.info(
+                f"{self.server_os} (name:{self.hostname}) (domain:{self.domain})"
+            )
+
+        self.logger.info(self.endpoint)
         
 
     def create_conn_obj(self):
 
         endpoints = [
-            'https://{}:{}/wsman'.format(self.host, self.args.port if self.args.port else 5986),
-            'http://{}:{}/wsman'.format(self.host, self.args.port if self.args.port else 5985)
+            f'https://{self.host}:{self.args.port or 5986}/wsman',
+            f'http://{self.host}:{self.args.port or 5985}/wsman',
         ]
+
 
         for url in endpoints:
             try:
                 requests.get(url, verify=False, timeout=3)
                 self.endpoint = url
                 if self.endpoint.startswith('https://'):
-                    self.port = self.args.port if self.args.port else 5986
+                    self.port = self.args.port or 5986
                 else:
-                    self.port = self.args.port if self.args.port else 5985
+                    self.port = self.args.port or 5985
 
                 self.logger.extra['port'] = self.port
 
                 return True
             except Exception as e:
                 if 'Max retries exceeded with url' not in str(e):
-                    logging.debug('Error in WinRM create_conn_obj:' + str(e))
+                    logging.debug(f'Error in WinRM create_conn_obj:{str(e)}')
 
         return False
 
@@ -143,23 +144,18 @@ class winrm(connection):
             # we could just authenticate without running a command :) (probably)
             self.conn.execute_ps("hostname")
             self.admin_privs = True
-            self.logger.success(u'{}\\{}:{} {}'.format(self.domain,
-                                                       username,
-                                                       password,
-                                                       highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else '')))
+            self.logger.success(
+                f"""{self.domain}\\{username}:{password} {highlight(f"({self.config.get('CME', 'pwn3d_label')})" if self.admin_privs else '')}"""
+            )
+
             if not self.args.continue_on_success:
                 return True
 
         except Exception as e:
             if "with ntlm" in str(e): 
-                self.logger.error(u'{}\\{}:{}'.format(self.domain,
-                                                        username,
-                                                        password))
+                self.logger.error(f'{self.domain}\\{username}:{password}')
             else:
-                self.logger.error(u'{}\\{}:{} "{}"'.format(self.domain,
-                                                        username,
-                                                        password,
-                                                        e))
+                self.logger.error(f'{self.domain}\\{username}:{password} "{e}"')
 
             return False
 
@@ -190,23 +186,18 @@ class winrm(connection):
             # we could just authenticate without running a command :) (probably)
             self.conn.execute_ps("hostname")
             self.admin_privs = True
-            self.logger.success(u'{}\\{}:{} {}'.format(self.domain,
-                                                       username,
-                                                       self.hash,
-                                                       highlight('({})'.format(self.config.get('CME', 'pwn3d_label')) if self.admin_privs else '')))
+            self.logger.success(
+                f"""{self.domain}\\{username}:{self.hash} {highlight(f"({self.config.get('CME', 'pwn3d_label')})" if self.admin_privs else '')}"""
+            )
+
             if not self.args.continue_on_success:
                 return True
 
         except Exception as e:
             if "with ntlm" in str(e): 
-                self.logger.error(u'{}\\{}:{}'.format(self.domain,
-                                                        username,
-                                                        self.hash))
+                self.logger.error(f'{self.domain}\\{username}:{self.hash}')
             else:
-                self.logger.error(u'{}\\{}:{} "{}"'.format(self.domain,
-                                                        username,
-                                                        self.hash,
-                                                        e))
+                self.logger.error(f'{self.domain}\\{username}:{self.hash} "{e}"')
 
             return False
 

@@ -54,17 +54,16 @@ class Msfrpc:
         return msgpack.unpackb(data)
 
     def call(self, method, opts=[]):
-        if method != 'auth.login':
-            if self.token is None:
-                raise MsfAuthError("MsfRPC: Not Authenticated")
+        if method != 'auth.login' and self.token is None:
+            raise MsfAuthError("MsfRPC: Not Authenticated")
 
         if method != "auth.login":
             opts.insert(0, self.token)
 
         if self.ssl is True:
-            url = "https://%s:%s%s" % (self.host, self.port, self.uri)
+            url = f"https://{self.host}:{self.port}{self.uri}"
         else:
-            url = "http://%s:%s%s" % (self.host, self.port, self.uri)
+            url = f"http://{self.host}:{self.port}{self.uri}"
 
         opts.insert(0, method)
         payload = self.encode(opts)

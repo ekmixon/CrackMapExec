@@ -31,12 +31,15 @@ class CMEModule:
      
         context.log.info('Getting LAPS Passwords')
 
-        searchFilter = '(&(objectCategory=computer)(ms-MCS-AdmPwd=*)(name='+ self.computer +'))'
+        searchFilter = (
+            f'(&(objectCategory=computer)(ms-MCS-AdmPwd=*)(name={self.computer}))'
+        )
+
         attributes = ['ms-MCS-AdmPwd','samAccountname']
         result = connection.search(searchFilter, attributes, 10000)
 
         for item in result:
-            if isinstance(item, ldapasn1_impacket.SearchResultEntry) is not True:
+            if not isinstance(item, ldapasn1_impacket.SearchResultEntry):
                 continue
             msMCSAdmPwd = ''
             sAMAccountName = ''
