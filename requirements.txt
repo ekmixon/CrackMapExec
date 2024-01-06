@@ -33,7 +33,7 @@ prompt-toolkit==3.0.16; python_full_version >= "3.6.1" and python_version >= "3.
 pyasn1==0.4.8; python_version >= "3.6"
 pycparser==2.20; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.4.0" and python_version >= "3.6"
 pycrypto==2.6.1
-pycryptodomex==3.10.1; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
+pycryptodomex==3.19.1; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
 pylnk3==0.3.0; python_version >= "3"
 pynacl==1.4.0; python_version >= "2.7" and python_full_version < "3.0.0" or python_full_version >= "3.4.0"
 pyopenssl==20.0.1; python_version >= "3.6" and python_full_version < "3.0.0" or python_full_version >= "3.5.0" and python_version >= "3.6"
